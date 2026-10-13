@@ -12,6 +12,7 @@ COLORS = ("bw", "bwr", "bwry")
 ROTS = (0, 90, 180, 270)
 LANGS = ("cs", "en")
 FORMATS = ("png", "bmp")
+LINES = ("solid", "dashed", "dotted")
 
 
 class ParamError(ValueError):
@@ -34,6 +35,7 @@ class Params:
     events: bool = True
     lang: str = "cs"
     fmt: str = "png"
+    lines: str = "solid"
 
 
 def _num(q, key, default, lo, hi, cast):
@@ -108,4 +110,5 @@ def parse(q: Mapping[str, str], cfg: Config, fmt: str = "png") -> Params:
         events=_flag(q, "events", True),
         lang=_choice(q, "lang", "cs", LANGS),
         fmt=fmt,
+        lines=_choice(q, "lines", "solid", LINES),
     )

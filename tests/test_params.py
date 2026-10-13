@@ -30,7 +30,7 @@ def test_missing_location():
 @pytest.mark.parametrize("q", [
     {"lat": "91"}, {"lon": "x"}, {"view": "dome"}, {"az": "361"}, {"fov": "20"},
     {"w": "10"}, {"h": "3000"}, {"colors": "rgb"}, {"rot": "45"}, {"iss": "yes"},
-    {"lang": "de"}, {"t": "včera"},
+    {"lang": "de"}, {"t": "včera"}, {"lines": "wavy"},
 ])
 def test_invalid(q):
     with pytest.raises(ParamError):
@@ -54,3 +54,8 @@ def test_full():
 
 def test_parse_time_naive_is_utc():
     assert parse_time("2026-01-01T00:00") == datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+
+def test_lines_style():
+    assert parse({}, CFG_LOC, "png").lines == "solid"
+    assert parse({"lines": "dotted"}, CFG_LOC, "png").lines == "dotted"

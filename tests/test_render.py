@@ -131,3 +131,18 @@ def test_small_map_has_no_constellation_labels():
     a = render(p, _model_with([("Rak", 85.0, 0.0)], []), IssInfo(False, None, None, None), None)
     b = render(p, _model_with([], []), IssInfo(False, None, None, None), None)
     assert a.tobytes() == b.tobytes()
+
+
+def test_line_styles_reduce_ink():
+    # jedna dlouhá spojnice; čárkovaná má méně bodů než plná, tečkovaná ještě méně
+    def ink(lines):
+        p = _params(events=0, iss=0, view="horizon", lines=lines)
+        m = fake_model()
+        model = SkyModel(m.t, m.tz, m.lat, m.lon, m.mode, np.zeros((0, 3)),
+                         [("X", [np.array([[10.0, 150.0], [30.0, 210.0]])])], [], [], m.sun,
+                         MoonInfo(-10.0, 0.0, 0.0, 0.0, None, None))
+        img = render(p, model, IssInfo(False, None, None, None), None)
+        return img.crop((0, 0, 800, 260)).histogram()[0]   # bílé body v mapě (noc: 0 = bílá)
+    solid, dashed, dotted = ink("solid"), ink("dashed"), ink("dotted")
+    assert solid > dashed > dotted > 0
+    assert dashed < 0.75 * solid and dotted < 0.5 * solid

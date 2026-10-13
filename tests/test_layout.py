@@ -46,3 +46,43 @@ def test_tiny_panel_has_no_info():
 def test_horizon_tiny_no_info():
     z = compute(296, 128, "horizon")
     assert z.info is None and z.map == Rect(0, 0, 296, 128)
+
+
+def test_horizon_portrait_grows_map_without_events():
+    full = compute(480, 800, "horizon")
+    z = compute(480, 800, "horizon", sections=("sun", "moon", "iss"))
+    assert z.map.h > full.map.h
+    assert z.info is not None and z.info.h < full.info.h
+    assert z.map.h + z.info.h == 800
+    # první sloupec (Slunce + Měsíc) má místo na 2 tituly, 6 řádků a mezery
+    assert z.columns[0].h >= 2 * 20 + 6 * 16 + 2 * 8
+    z2 = compute(480, 800, "horizon", sections=("sun", "moon"))
+    assert z2.map.h >= z.map.h            # obě mohou narazit na strop 90°
+
+
+def test_horizon_landscape_never_shrinks_map_without_events():
+    full = compute(800, 480, "horizon")
+    z = compute(800, 480, "horizon", sections=("sun", "moon"))
+    assert z.map.h >= full.map.h
+
+
+def test_horizon_with_events_keeps_layout():
+    assert compute(480, 800, "horizon", sections=("sun", "moon", "events")) == compute(480, 800, "horizon")
+
+
+def test_column_groups():
+    from sky.layout import column_groups
+    assert column_groups(1) == (("sun", "moon", "iss", "events"),)
+    assert column_groups(2) == (("sun", "moon"), ("iss", "events"))
+    assert column_groups(3) == (("sun", "moon"), ("iss",), ("events",))
+
+
+def test_horizon_map_capped_at_90_degrees():
+    from sky.layout import HORIZON_BAR
+    # 480 px široký výsek 120° má 4 px/°, obzor→zenit je tedy max 360 px + pás světových stran
+    z = compute(480, 800, "horizon", sections=("sun", "moon"), fov=120)
+    assert z.map.h <= 480 * 90 // 120 + HORIZON_BAR
+    assert z.info.bottom == 800
+    # při fov 180 se strop uplatní i ve výchozím rozložení
+    z = compute(480, 800, "horizon", fov=180)
+    assert z.map.h <= 480 * 90 // 180 + HORIZON_BAR

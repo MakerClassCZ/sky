@@ -22,7 +22,8 @@ STAR_SIZES = ((1.0, 5), (2.0, 4), (3.0, 3), (4.0, 2), (99.0, 1))
 LINE_MIN_ALT = -15.0
 LABEL_MIN_ALT = 10.0
 LABEL_MIN_MAP = 300       # popisky souhvězdí jen na mapách aspoň takto velkých (px)
-HORIZON_BAR = 24          # pás pod obzorem u `horizon` pro světové strany
+HORIZON_BAR = layout.HORIZON_BAR
+DASH = {"solid": None, "dashed": (4, 4), "dotted": (1, 2)}   # (kreslit, vynechat) v px
 Box = tuple[int, int, int, int]
 
 
@@ -43,7 +44,9 @@ def render(params: Params, model: SkyModel, iss_info: IssInfo, events: list[Even
     img.putpalette(pal.flat())
     ctx = Ctx(img, ImageDraw.Draw(img), pal, params.lang,
               load_font("8x16"), load_font("12x24"), load_font("16x32"))
-    zones = layout.compute(params.w, params.h, params.view)
+    sections = tuple(s for s in layout.ALL_SECTIONS
+                     if (s != "iss" or params.iss) and (s != "events" or params.events))
+    zones = layout.compute(params.w, params.h, params.view, sections, params.fov)
     if params.view == "sky":
         _draw_sky(ctx, zones.map, params, model, iss_info)
     else:
@@ -163,7 +166,30 @@ def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
         _body_label(ctx, placed, x, y, "ISS", ctx.pal["iss"], bounds)
 
 
-def _draw_lines(ctx: Ctx, model: SkyModel, clip, wraps, ox: int, oy: int) -> None:
+def _styled_line(d: ImageDraw.ImageDraw, p0, p1, fill: int, pattern) -> None:
+    """Úsečka plná, nebo s opakovaným vzorem (kreslit, vynechat) v pixelech."""
+    if pattern is None:
+        d.line((p0[0], p0[1], p1[0], p1[1]), fill=fill, width=1)
+        return
+    on, off = pattern
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    length = math.hypot(dx, dy)
+    if length < 1.0:
+        d.point((round(p0[0]), round(p0[1])), fill=fill)
+        return
+    ux, uy = dx / length, dy / length
+    t = 0.0
+    while t < length:
+        t1 = min(t + on, length)
+        if on == 1:
+            d.point((round(p0[0] + ux * t), round(p0[1] + uy * t)), fill=fill)
+        else:
+            d.line((p0[0] + ux * t, p0[1] + uy * t, p0[0] + ux * t1, p0[1] + uy * t1), fill=fill, width=1)
+        t += on + off
+
+
+def _draw_lines(ctx: Ctx, model: SkyModel, clip, wraps, ox: int, oy: int, style: str) -> None:
+    pattern = DASH[style]
     for _, segs in model.lines:
         for seg in segs:
             for (a0, z0), (a1, z1) in zip(seg[:-1], seg[1:]):
@@ -172,7 +198,7 @@ def _draw_lines(ctx: Ctx, model: SkyModel, clip, wraps, ox: int, oy: int) -> Non
                 clipped = clip(a0, z0, a1, z1)
                 if clipped:
                     (x0, y0), (x1, y1) = clipped
-                    ctx.d.line((x0 + ox, y0 + oy, x1 + ox, y1 + oy), fill=ctx.pal["line"], width=1)
+                    _styled_line(ctx.d, (x0 + ox, y0 + oy), (x1 + ox, y1 + oy), ctx.pal["line"], pattern)
 
 
 # ---------- mapa: celá obloha ----------
@@ -193,7 +219,7 @@ def _draw_sky(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: IssI
     def clip(a0, z0, a1, z1):
         return clip_segment_circle(proj.project(a0, z0), proj.project(a1, z1), (cx, cy), R)
 
-    _draw_lines(ctx, model, clip, lambda z0, z1: False, ox, oy)
+    _draw_lines(ctx, model, clip, lambda z0, z1: False, ox, oy, params.lines)
     for alt, az, mag in model.stars:
         if alt >= 0.0:
             x, y = project(alt, az)
@@ -237,7 +263,7 @@ def _draw_horizon(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: 
     def clip(a0, z0, a1, z1):
         return clip_segment_rect(proj.project(a0, z0), proj.project(a1, z1), m.w, mh)
 
-    _draw_lines(ctx, model, clip, proj.segment_wraps, ox, oy)
+    _draw_lines(ctx, model, clip, proj.segment_wraps, ox, oy, params.lines)
     for alt, az, mag in model.stars:
         if proj.visible(alt, az):
             x, y = project(alt, az)
@@ -386,14 +412,7 @@ def _draw_info(ctx: Ctx, z: Zones, params: Params, model: SkyModel, iss_info: Is
         sections.append(("iss", lambda c: _sec_iss(c, model, iss_info)))
     if params.events:
         sections.append(("events", lambda c: _sec_events(c, model, events)))
-    n = len(z.columns)
-    if n >= 3:
-        keys = (("sun", "moon"), ("iss",), ("events",))
-    elif n == 2:
-        keys = (("sun", "moon"), ("iss", "events"))
-    else:
-        keys = (("sun", "moon", "iss", "events"),)
-    for col, group in zip(z.columns, keys):
+    for col, group in zip(z.columns, layout.column_groups(len(z.columns))):
         cur = Cursor(ctx, col)
         for name, fn in sections:
             if name in group:
