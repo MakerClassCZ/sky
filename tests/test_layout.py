@@ -23,8 +23,8 @@ def test_horizon_landscape_800x480():
     assert z.map == Rect(0, 0, 800, 288)
     assert z.info == Rect(0, 288, 800, 192)
     assert len(z.columns) == 3
-    assert z.header_big
-    assert z.columns[0].h >= 8 * 16
+    assert not z.header_big                    # velká hlavička by vytlačila řádek Fáze
+    assert z.columns[0].h >= 9 * 16            # Slunce (4 řádky) + mezera + Měsíc (4 řádky)
 
 
 def test_horizon_portrait_480x800():

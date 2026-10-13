@@ -71,7 +71,70 @@ def test_log_hides_userinfo(tmp_path, monkeypatch, caplog):
 
 
 @pytest.mark.skipif(not Path("cache/de421.bsp").exists(), reason="de421.bsp missing")
-def test_render_failure_is_500_not_crash():
+def test_render_failure_is_500_not_crash(monkeypatch):
+    from sky import service
+    monkeypatch.setattr(service.render, "render", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
     c = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache"})), raise_server_exceptions=False)
-    r = c.get("/sky.png?lat=49&lon=13&t=2300-01-01T00:00Z")   # mimo rozsah efemeridy
+    r = c.get("/sky.png?lat=49&lon=13&t=2026-05-05T00:00Z&w=100&h=100")
     assert r.status_code == 500 and "vykreslení selhalo" in r.text and "cache" not in r.text
+
+
+def test_non_ascii_token_is_403_not_500():
+    c = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache", "SKY_TOKEN": "s3cret"})),
+                   raise_server_exceptions=False)
+    assert c.get("/sky.png?lat=49&lon=13&token=%C4%8D").status_code == 403
+    c2 = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache", "SKY_TOKEN": "heslíčko"})),
+                    raise_server_exceptions=False)
+    assert c2.get("/sky.png?lat=99&lon=13&token=hesl%C3%AD%C4%8Dko").status_code == 400
+
+
+@pytest.mark.skipif(not Path("cache/de421.bsp").exists(), reason="de421.bsp missing")
+def test_time_outside_ephemeris_is_400():
+    c = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache"})), raise_server_exceptions=False)
+    r = c.get("/sky.png?lat=49&lon=13&t=1850-01-01T00:00Z")
+    assert r.status_code == 400 and "1900" in r.text
+
+
+def test_tz_lookup_is_consistent_across_threads():
+    from concurrent.futures import ThreadPoolExecutor
+    from sky.geo import tz_for, _tz_lock
+    pts = [(49.747, 13.378), (40.7, -74.0), (35.7, 139.7), (-33.9, 151.2)] * 25
+    with ThreadPoolExecutor(8) as ex:
+        keys = list(ex.map(lambda p: tz_for(*p).key, pts))
+    assert keys == [tz_for(*p).key for p in pts]
+    assert _tz_lock is not None
+
+
+def test_serve_disables_access_log(monkeypatch):
+    import uvicorn
+    from sky.cli import main
+    calls = {}
+    monkeypatch.setattr(uvicorn, "run", lambda app, **kw: calls.update(kw))
+    assert main(["serve", "--port", "1"]) == 0
+    assert calls.get("access_log") is False
+
+
+def test_dockerfile_disables_access_log():
+    assert "--no-access-log" in Path("Dockerfile").read_text(encoding="utf-8")
+
+
+def test_render_cache_bounded_by_bytes(monkeypatch):
+    from datetime import datetime, timezone
+    from sky import service
+    from sky.params import parse
+    service._cache.clear()
+    cfg = config.load({"SKY_CACHE_DIR": "cache", "SKY_RENDER_CACHE_S": "300"})
+    big = service.Result(b"x" * (service.MAX_CACHE_BYTES + 1), "image/png", "night")
+    small = service.Result(b"y", "image/png", "night")
+    p = parse({"lat": "1", "lon": "2"}, cfg, "png")
+    t = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    service._store(p, t, big, cfg)
+    assert service._cache == {}
+    service._store(p, t, small, cfg)
+    assert len(service._cache) == 1
+    # prošlé položky se při vkládání uklidí
+    key = next(iter(service._cache))
+    service._cache[key] = (0.0, small)
+    service._store(parse({"lat": "3", "lon": "4"}, cfg, "png"), t, small, cfg)
+    assert key not in service._cache and len(service._cache) == 1
+    service._cache.clear()

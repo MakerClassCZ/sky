@@ -73,6 +73,9 @@ def _flag(q, key, default):
     return raw == "1"
 
 
+YEAR_MIN, YEAR_MAX = 1900, 2050     # pokrytí efemeridy de421
+
+
 def parse_time(raw: str) -> datetime:
     try:
         dt = datetime.fromisoformat(raw)
@@ -80,7 +83,10 @@ def parse_time(raw: str) -> datetime:
         raise ParamError("t: očekáván čas ISO 8601, např. 2026-10-13T22:00+02:00") from None
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+    dt = dt.astimezone(timezone.utc)
+    if not (YEAR_MIN <= dt.year <= YEAR_MAX):
+        raise ParamError(f"t: rok mimo rozsah efemeridy {YEAR_MIN}–{YEAR_MAX}")
+    return dt
 
 
 def parse(q: Mapping[str, str], cfg: Config, fmt: str = "png") -> Params:

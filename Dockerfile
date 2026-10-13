@@ -16,4 +16,4 @@ RUN pip install --no-cache-dir . \
  && SKY_CACHE_DIR=/app/cache-seed python -m sky warmup
 
 EXPOSE 8080
-CMD ["sh", "-c", "mkdir -p \"$SKY_CACHE_DIR\" && cp -n /app/cache-seed/*.bsp \"$SKY_CACHE_DIR\"/ 2>/dev/null; exec uvicorn sky.app:app --host 0.0.0.0 --port 8080"]
+CMD ["sh", "-c", "mkdir -p \"$SKY_CACHE_DIR\" && cp -n /app/cache-seed/*.bsp \"$SKY_CACHE_DIR\"/ 2>/dev/null; exec uvicorn sky.app:app --host 0.0.0.0 --port 8080 --no-access-log"]

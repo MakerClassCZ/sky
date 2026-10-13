@@ -42,7 +42,8 @@ def main(argv=None) -> int:
         return 0
     if a.cmd == "serve":
         import uvicorn
-        uvicorn.run("sky.app:app", host=a.host, port=a.port)
+        # access log vypnut: URL nese token; vlastní INFO řádek je v service.build
+        uvicorn.run("sky.app:app", host=a.host, port=a.port, access_log=False)
         return 0
 
     q = {k: v for k, v in vars(a).items() if k in QUERY_KEYS and v}

@@ -14,6 +14,7 @@ from sky.params import Params
 log = logging.getLogger(__name__)
 _cache: dict[tuple, tuple[float, "Result"]] = {}
 CACHE_MAX_ENTRIES = 256
+MAX_CACHE_BYTES = 1 << 20          # větší výsledky se necachují (2000×2000 BMP má 4 MB)
 
 
 class EphemerisMissing(RuntimeError):
@@ -53,7 +54,17 @@ def build(params: Params, cfg: Config, now: datetime | None = None) -> Result:
     log.info("render %s %dx%d %s %s mode=%s %.0f ms", params.view, params.w, params.h, params.colors,
              params.fmt, model.mode, (time.perf_counter() - t0) * 1000)
     res = Result(data, mime, model.mode)
+    _store(params, t, res, cfg)
+    return res
+
+
+def _store(params: Params, t: datetime, res: Result, cfg: Config) -> None:
+    """Uloží do cache; prošlé položky uklidí, velké výsledky vynechá, strop počtu drží."""
+    now = time.time()
+    for k in [k for k, (ts, _) in _cache.items() if now - ts >= cfg.render_cache_s]:
+        del _cache[k]
+    if len(res.data) > MAX_CACHE_BYTES:
+        return
     if len(_cache) >= CACHE_MAX_ENTRIES:
         _cache.clear()
-    _cache[key] = (time.time(), res)
-    return res
+    _cache[_key(params, t)] = (now, res)

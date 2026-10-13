@@ -26,7 +26,7 @@ def create_app(cfg: config.Config | None = None) -> FastAPI:
     @app.get("/sky.{fmt}")
     def sky(fmt: str, request: Request):
         q = dict(request.query_params)
-        if cfg.token and not secrets.compare_digest(q.get("token", ""), cfg.token):
+        if cfg.token and not secrets.compare_digest(q.get("token", "").encode(), cfg.token.encode()):
             return PlainTextResponse("forbidden", status_code=403)
         try:
             params = parse(q, cfg, fmt)

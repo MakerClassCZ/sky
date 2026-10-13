@@ -9,6 +9,7 @@ MIN_INFO_W = 112    # 14 znaků 8 px
 WIDE_COL_W = 160    # min. šířka sloupce při dvou sloupcích
 WIDE3_COL_W = 200   # min. šířka sloupce při třech sloupcích
 MIN_INFO_H = (16 + U + MARGIN) + 3 * U   # malá hlavička + 3 řádky
+BIG_HEADER_H = 32 + U + MARGIN
 
 
 @dataclass(frozen=True)
@@ -37,7 +38,7 @@ class Zones:
 
 
 def _split(info: Rect, header_big: bool) -> tuple[Rect, tuple[Rect, ...]]:
-    hh = (32 if header_big else 16) + U + MARGIN
+    hh = BIG_HEADER_H if header_big else 16 + U + MARGIN
     header = Rect(info.x, info.y, info.w, hh)
     body = Rect(info.x, header.bottom, info.w, max(0, info.bottom - header.bottom))
     wide = body.w >= 1.5 * body.h
@@ -70,6 +71,8 @@ def compute(w: int, h: int, view: str) -> Zones:
             info = None
     if info is None:
         return Zones(m, None, None, (), False)
-    big = info.h >= 128 and info.w >= 224
+    # Velká hlavička jen tehdy, když pod ní zbude místo na Slunce + Měsíc v jednom
+    # sloupci (2× titulek + 3 řádky, mezera): jinak by na 800×480 horizon vypadl řádek Fáze.
+    big = info.h >= 128 and info.w >= 224 and info.h - BIG_HEADER_H >= 9 * U
     header, cols = _split(info, big)
     return Zones(m, info, header, cols, big)

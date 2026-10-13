@@ -37,14 +37,17 @@ GET /health
 | `w`, `h` | 64..2000 | rozměr v px; poměr stran určuje rozložení | `800`, `480` |
 | `colors` | `bw` \| `bwr` \| `bwry` | paleta (červeně planety, ISS, dnešní úkaz; žlutě Slunce a Měsíc) | `bw` |
 | `rot` | 0 \| 90 \| 180 \| 270 | otočení hotového obrázku po směru hodin | `0` |
-| `t` | ISO 8601 | čas vykreslení (náhledy, testy); bez zóny = UTC | teď |
+| `t` | ISO 8601 | čas vykreslení (náhledy, testy); bez zóny = UTC; roky 1900–2050 (rozsah efemeridy) | teď |
 | `iss`, `events` | 0 \| 1 | vypnutí sekce ISS / úkazů | `1` |
 | `lang` | `cs` \| `en` | jazyk popisků a textů | `cs` |
 | `token` | | povinný, když je nastaven `SKY_TOKEN` | – |
 
 Přípona určuje formát: `.png` je indexované PNG s paletou v barvách panelu
 (1 bit pro `bw`, 2 bity jinak), `.bmp` je 1 bpp pro `bw` a 8 bpp indexované pro
-`bwr`/`bwry`. Odpověď nese hlavičku `X-Sky-Mode: night|day`. Chybné parametry
+`bwr`/`bwry`. Pozor: v 1bpp BMP je podle konvence Pillow/Windows index 0 černá a
+1 bílá (opačně než v PNG paletě); firmware má číst paletu z hlavičky. Odpověď
+nese hlavičku `X-Sky-Mode: night|day`. Služba nezapisuje access log (URL nese
+token); každé vykreslení loguje jeden řádek bez parametrů. Chybné parametry
 vrací 400 s popisem, špatný token 403, chybějící efemerida 503.
 
 Hotové obrázky se cachují v paměti 5 minut (`SKY_RENDER_CACHE_S`); TLE a ICS se

@@ -1,6 +1,7 @@
 """Časová zóna, formátování a texty (cs/en)."""
 from __future__ import annotations
 
+import threading
 from datetime import date, datetime
 from functools import lru_cache
 from zoneinfo import ZoneInfo
@@ -24,6 +25,9 @@ TEXTS = {
 }
 
 
+_tz_lock = threading.Lock()   # TimezoneFinder není thread-safe (viz docstring knihovny)
+
+
 @lru_cache(maxsize=None)
 def _finder():
     from timezonefinder import TimezoneFinder
@@ -32,7 +36,8 @@ def _finder():
 
 def tz_for(lat: float, lon: float) -> ZoneInfo:
     try:
-        name = _finder().timezone_at(lat=lat, lng=lon)
+        with _tz_lock:
+            name = _finder().timezone_at(lat=lat, lng=lon)
         return ZoneInfo(name or "UTC")
     except Exception:  # noqa: BLE001 – neznámá zóna nesmí shodit render
         return ZoneInfo("UTC")
