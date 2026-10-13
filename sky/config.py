@@ -27,6 +27,7 @@ class Config:
     render_cache_s: int
     event_types: tuple[str, ...]
     rate_limit: int            # požadavků na /sky.* za minutu a IP; 0 = bez limitu
+    trust_proxy: bool          # IP brát z poslední položky X-Forwarded-For (jen za reverzní proxy)
 
 
 def _float_or_none(v: str | None) -> float | None:
@@ -47,4 +48,5 @@ def load(env: Mapping[str, str] | None = None) -> Config:
         render_cache_s=int(e.get("SKY_RENDER_CACHE_S", "300")),
         event_types=types,
         rate_limit=int(e.get("SKY_RATE_LIMIT", "60")),
+        trust_proxy=e.get("SKY_TRUST_PROXY", "0") == "1",
     )

@@ -151,3 +151,31 @@ def test_rate_limit_per_ip():
     app_mod._limiter.clear()
     c0 = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache", "SKY_RATE_LIMIT": "0"})))
     assert all(c0.get("/sky.png?lat=99&lon=1").status_code == 400 for _ in range(5))
+
+
+def test_forwarded_for_is_ignored_unless_trusted():
+    from sky import app as app_mod
+    app_mod._limiter.clear()
+    c = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache", "SKY_RATE_LIMIT": "2"})))
+    # bez SKY_TRUST_PROXY se počítá skutečný klient, podvržená hlavička limit neobejde
+    codes = [c.get("/sky.png?lat=99&lon=1", headers={"X-Forwarded-For": f"10.0.0.{i}"}).status_code for i in range(3)]
+    assert codes == [400, 400, 429]
+    app_mod._limiter.clear()
+    c2 = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache", "SKY_RATE_LIMIT": "2", "SKY_TRUST_PROXY": "1"})))
+    # za proxy platí poslední položka (doplněná proxy); klientem předřazené hodnoty se ignorují
+    codes = [c2.get("/sky.png?lat=99&lon=1", headers={"X-Forwarded-For": f"10.0.0.{i}, 203.0.113.5"}).status_code
+             for i in range(3)]
+    assert codes == [400, 400, 429]
+    app_mod._limiter.clear()
+
+
+def test_limiter_prune_keeps_active_counters():
+    from sky import app as app_mod
+    app_mod._limiter.clear()
+    now = __import__("time").time()
+    app_mod._limiter["active"] = [now, now, now]
+    for i in range(app_mod.LIMITER_MAX_IPS + 5):
+        app_mod._limiter[f"stale{i}"] = [now - 3600]
+    assert app_mod._rate_limited("active", 3) is True          # čítač aktivní IP přežil úklid
+    assert len(app_mod._limiter) <= app_mod.LIMITER_MAX_IPS + 1
+    app_mod._limiter.clear()

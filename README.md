@@ -88,6 +88,7 @@ python -m sky warmup
 | `SKY_RENDER_CACHE_S` | TTL cache hotových obrázků v sekundách | `300` |
 | `SKY_EVENT_TYPES` | typy úkazů k zobrazení: `eye,scope,warn,moon,none,info` | `eye,scope,warn,moon` |
 | `SKY_RATE_LIMIT` | nejvýš tolik požadavků na `/sky.*` za minutu z jedné IP (429 při překročení); `0` vypne | `60` |
+| `SKY_TRUST_PROXY` | `1` = IP klienta z poslední položky `X-Forwarded-For` (nastavte jen za reverzní proxy, např. v Coolify) | `0` |
 
 ## Nasazení v Coolify
 
@@ -97,8 +98,9 @@ python -m sky warmup
 4. **Environment Variables**: pro soukromou instanci `SKY_TOKEN`
    (`php -r "echo bin2hex(random_bytes(16));"`); pro veřejnou instanci (např.
    `sky.makerclass.cz`) token nenastavujte, ochranou je limit `SKY_RATE_LIMIT`
-   (výchozí 60 požadavků za minutu na IP, čte se `X-Forwarded-For` z proxy)
-   a paměťová cache hotových obrázků. Volitelně `SKY_LAT`, `SKY_LON`.
+   (výchozí 60 požadavků za minutu na IP) a paměťová cache hotových obrázků.
+   V Coolify nastavte `SKY_TRUST_PROXY=1`, aby se IP brala z `X-Forwarded-For`
+   doplněné proxy; bez proxy hlavičku nechte ignorovat, klient si ji může podvrhnout. Volitelně `SKY_LAT`, `SKY_LON`.
 5. Health check: `GET /health` → `{"status": "ok", "ephemeris": "ok"}`.
 
 Lokálně:
