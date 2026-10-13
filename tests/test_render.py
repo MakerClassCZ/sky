@@ -259,3 +259,15 @@ def test_weather_line_in_sun_section():
     a = render(p, fake_model(), IssInfo(False, None, None, None), [], CloudInfo(44, 10, T))
     b = render(p, fake_model(), IssInfo(False, None, None, None), [], None)
     assert a.tobytes() != b.tobytes()
+
+
+def test_moon_direction_follows_great_circle():
+    from sky.render import step_toward
+    # krok 1° z (alt 40, az 180) směrem k bodu na az 180, alt -30: míří přímo dolů (k obzoru)
+    a, z = step_toward(40.0, 180.0, -30.0, 180.0, 1.0)
+    assert a == pytest.approx(39.0, abs=1e-6) and z == pytest.approx(180.0, abs=1e-6)
+    # krok směrem k bodu o 90° azimutu dál na stejné výšce vede po velké kružnici, azimut roste
+    a, z = step_toward(40.0, 180.0, 40.0, 270.0, 1.0)
+    assert z > 180.0 and a > 40.0        # velká kružnice mezi dvěma body na alt 40 se vyklene výš
+    # nulová vzdálenost nesmí spadnout
+    assert step_toward(10.0, 10.0, 10.0, 10.0, 1.0) == pytest.approx((10.0, 10.0))

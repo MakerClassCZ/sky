@@ -93,6 +93,27 @@ def _planet(ctx: Ctx, x: float, y: float, key: str = "") -> None:
     ctx.d.ellipse((x - 3.5, y - 3.5, x + 3.5, y + 3.5), fill=ctx.pal["planet"], outline=ctx.pal["fg"])
 
 
+def _altaz_xyz(alt: float, az: float) -> tuple[float, float, float]:
+    a, z = math.radians(alt), math.radians(az)
+    return (math.cos(a) * math.sin(z), math.cos(a) * math.cos(z), math.sin(a))
+
+
+def step_toward(alt0: float, az0: float, alt1: float, az1: float, step_deg: float) -> tuple[float, float]:
+    """Bod `step_deg` od (alt0, az0) po velké kružnici směrem k (alt1, az1)."""
+    x0, y0, z0 = _altaz_xyz(alt0, az0)
+    x1, y1, z1 = _altaz_xyz(alt1, az1)
+    dot = max(-1.0, min(1.0, x0 * x1 + y0 * y1 + z0 * z1))
+    omega = math.acos(dot)
+    if omega < 1e-9:
+        return (alt0, az0)
+    if omega <= math.radians(step_deg):
+        return (alt1, az1)                 # cíl je blíž než krok: směr k němu je totéž
+    t = math.radians(step_deg) / omega
+    s0, s1 = math.sin((1 - t) * omega) / math.sin(omega), math.sin(t * omega) / math.sin(omega)
+    x, y, z = s0 * x0 + s1 * x1, s0 * y0 + s1 * y1, s0 * z0 + s1 * z1
+    return (math.degrees(math.asin(max(-1.0, min(1.0, z)))), math.degrees(math.atan2(x, y)) % 360.0)
+
+
 def moon_lit_direction(moon_xy, sun_xy) -> tuple[float, float]:
     """Jednotkový směr od Měsíce ke Slunci v obrazových souřadnicích (osvětlená strana)."""
     dx, dy = sun_xy[0] - moon_xy[0], sun_xy[1] - moon_xy[1]
@@ -183,7 +204,9 @@ def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
             _body_label(ctx, placed, x, y, b.name, ctx.pal["label"], bounds)
     if visible(model.moon.alt, model.moon.az):
         x, y = project(model.moon.alt, model.moon.az)
-        _moon(ctx, x, y, model.moon.phase_deg, moon_lit_direction((x, y), project(model.sun.alt, model.sun.az)))
+        # směr osvětlené strany: krátký krok po velké kružnici k Slunci, promítnutý do obrazu
+        toward = step_toward(model.moon.alt, model.moon.az, model.sun.alt, model.sun.az, 2.0)
+        _moon(ctx, x, y, model.moon.phase_deg, moon_lit_direction((x, y), project(*toward)))
         placed.append((int(x) - 9, int(y) - 9, int(x) + 10, int(y) + 10))
     if visible(model.sun.alt, model.sun.az):
         x, y = project(model.sun.alt, model.sun.az)
