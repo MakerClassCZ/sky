@@ -1,0 +1,32 @@
+[project]
+name = "sky-epaper"
+version = "0.1.0"
+description = "Aktuální obloha pro e-paper displeje (Živý obraz, Paperboard)"
+requires-python = ">=3.12"
+dependencies = [
+  "skyfield>=1.49",
+  "numpy>=1.26",
+  "Pillow>=10.0",
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "icalendar>=5.0",
+  "recurring-ical-events>=2.1",
+  "timezonefinder>=6.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["sky*"]
+
+[tool.setuptools.package-data]
+sky = ["data/*", "fonts/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["ephem: needs de421.bsp in SKY_CACHE_DIR"]
