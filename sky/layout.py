@@ -23,7 +23,7 @@ LINE_HEADER_H = 24 + MARGIN                  # jednořádková hlavička (datum 
 def column_groups(n: int) -> tuple[tuple[str, ...], ...]:
     """Které sekce patří do kterého sloupce (sdílí layout i render)."""
     if n >= 3:
-        return (("sun", "iss"), ("moon",), ("events",))
+        return (("sun",), ("moon",), ("events",))      # ISS jde do pásu přes 1. + 2. sloupec
     if n == 2:
         return (("sun", "moon"), ("iss", "events"))
     return (ALL_SECTIONS,)
@@ -34,6 +34,10 @@ def _needed_body_h(n: int, sections: tuple[str, ...]) -> int:
     best = 0
     for group in column_groups(n):
         best = max(best, sum(SECTION_H[s] + SECTION_GAP for s in group if s in sections))
+    if n >= 3 and "iss" in sections:
+        # pás ISS pod Sluncem/Měsícem: nejvyšší z obou sloupců + ISS
+        top = max((SECTION_H[s] + SECTION_GAP for s in ("sun", "moon") if s in sections), default=0)
+        best = max(best, top + SECTION_H["iss"] + SECTION_GAP)
     return best
 
 
@@ -61,9 +65,10 @@ class Zones:
     columns: tuple[Rect, ...]
     header_big: bool
     header_line: bool = False      # datum, čas a poloha na jednom řádku (horizon na šířku)
+    span: Rect | None = None       # pás přes 1. + 2. sloupec pod Sluncem a Měsícem (ISS), jen u 3 sloupců
 
 
-def _split(info: Rect, header_big: bool, header_line: bool = False) -> tuple[Rect, tuple[Rect, ...]]:
+def _split(info: Rect, header_big: bool, header_line: bool = False) -> tuple[Rect, tuple[Rect, ...], Rect | None]:
     hh = LINE_HEADER_H if header_line else (BIG_HEADER_H if header_big else SMALL_HEADER_H)
     header = Rect(info.x, info.y, info.w, hh)
     body = Rect(info.x, header.bottom, info.w, max(0, info.bottom - header.bottom))
@@ -74,9 +79,17 @@ def _split(info: Rect, header_big: bool, header_line: bool = False) -> tuple[Rec
         n = 2
     else:
         n = 1
+    if n == 3:
+        # 25 / 25 / 50 %: úkazy potřebují nejvíc místa; ISS v pásu pod prvními dvěma
+        q = body.w // 4
+        cols = (Rect(body.x, body.y, q, body.h), Rect(body.x + q, body.y, q, body.h),
+                Rect(body.x + 2 * q, body.y, body.w - 2 * q, body.h))
+        top = max(SECTION_H["sun"], SECTION_H["moon"]) + SECTION_GAP
+        span = Rect(body.x, body.y + top, 2 * q, max(0, body.h - top))
+        return header, cols, span
     cw = body.w // n
     cols = tuple(Rect(body.x + i * cw, body.y, cw, body.h) for i in range(n))
-    return header, cols
+    return header, cols, None
 
 
 def _zones(m: Rect, info: Rect | None, line: bool = False) -> Zones:
@@ -85,8 +98,8 @@ def _zones(m: Rect, info: Rect | None, line: bool = False) -> Zones:
     # Velká hlavička jen tehdy, když pod ní zbude místo na Slunce + Měsíc v jednom
     # sloupci (2× titulek + 3 řádky, mezera): jinak by vypadl řádek Fáze.
     big = not line and info.h >= 128 and info.w >= 224 and info.h - BIG_HEADER_H >= 9 * U
-    header, cols = _split(info, big, line)
-    return Zones(m, info, header, cols, big, line)
+    header, cols, span = _split(info, big, line)
+    return Zones(m, info, header, cols, big, line, span)
 
 
 def compute(w: int, h: int, view: str, sections: tuple[str, ...] = ALL_SECTIONS,

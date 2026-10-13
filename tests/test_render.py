@@ -183,3 +183,23 @@ def test_saturn_has_ring():
         return sum(1 for dx in range(-14, 15) if img.getpixel((int(x) + dx, int(y))) != 1 and dx < 5)  # vlevo od popisku
 
     assert width_of("saturn barycenter") > width_of("mars")
+
+
+def test_events_title_is_contextual():
+    from sky.render import events_title
+    assert events_title("cs", True, False) == "Úkazy"
+    assert events_title("cs", True, True) == "Úkazy a starty"
+    assert events_title("cs", False, True) == "Starty"
+    assert events_title("en", True, True) == "Events and launches"
+    assert events_title("en", False, True) == "Launches"
+
+
+def test_iss_lines_join_when_wide():
+    from sky.render import iss_lines
+    tz = ZoneInfo("Europe/Prague")
+    wide = iss_lines("cs", tz, ISS, 50)
+    assert wide == ["út 13. 10. 22:00–22:00, max 61° J"]
+    narrow = iss_lines("cs", tz, ISS, 25)
+    assert narrow == ["út 13. 10. 22:00–22:00", "max 61° J"]
+    assert iss_lines("cs", tz, IssInfo(True, 1.0, 2.0, None), 50) == ["žádný do 48 h"]
+    assert iss_lines("en", tz, IssInfo(False, None, None, None), 50) == ["unavailable"]

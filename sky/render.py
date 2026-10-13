@@ -381,25 +381,41 @@ def _sec_moon(c: Cursor, model: SkyModel) -> None:
     c.gap()
 
 
+def iss_lines(lang: str, tz, info: IssInfo, max_chars: int) -> list[str]:
+    """Řádky sekce ISS; přelet na jeden řádek, když se do šířky vejde."""
+    if not info.available:
+        return [tr(lang, "unavailable")]
+    if info.next_pass is None:
+        return [tr(lang, "no_pass")]
+    p = info.next_pass
+    s = p.start.astimezone(tz)
+    when = f"{fmt_date(s.date(), lang)} {s.strftime('%H:%M')}–{p.end.astimezone(tz).strftime('%H:%M')}"
+    peak = f"{tr(lang, 'max')} {round(p.max_alt)}° {compass(p.max_az, lang)}"
+    joined = f"{when}, {peak}"
+    return [joined] if len(joined) <= max_chars else [when, peak]
+
+
 def _sec_iss(c: Cursor, model: SkyModel, info: IssInfo) -> None:
     L, tz = c.ctx.lang, model.tz
     if not c.title("iss", tr(L, "iss")):
         return
-    if not info.available:
-        c.line(tr(L, "unavailable"))
-    elif info.next_pass is None:
-        c.line(tr(L, "no_pass"))
-    else:
-        p = info.next_pass
-        s = p.start.astimezone(tz)
-        c.line(f"{fmt_date(s.date(), L)} {s.strftime('%H:%M')}–{p.end.astimezone(tz).strftime('%H:%M')}")
-        c.line(f"{tr(L, 'max')} {round(p.max_alt)}° {compass(p.max_az, L)}")
+    for line in iss_lines(L, tz, info, c.w // c.ctx.small.width):
+        c.line(line)
     c.gap()
 
 
-def _sec_events(c: Cursor, model: SkyModel, events: list[Event] | None) -> None:
+def events_title(lang: str, events: bool, rockets: bool) -> str:
+    """Nadpis sekce podle toho, co obsahuje: Úkazy / Úkazy a starty / Starty."""
+    if events and rockets:
+        return tr(lang, "events_launches")
+    if rockets:
+        return tr(lang, "launches")
+    return tr(lang, "events")
+
+
+def _sec_events(c: Cursor, model: SkyModel, events: list[Event] | None, title: str) -> None:
     L = c.ctx.lang
-    if not c.title("cal", tr(L, "events")):
+    if not c.title("cal", title):
         return
     if events is None:
         c.line(tr(L, "unavailable"))
@@ -425,9 +441,14 @@ def _draw_info(ctx: Ctx, z: Zones, params: Params, model: SkyModel, iss_info: Is
     if params.iss:
         sections.append(("iss", lambda c: _sec_iss(c, model, iss_info)))
     if params.events or params.rockets:
-        sections.append(("events", lambda c: _sec_events(c, model, events)))
-    for col, group in zip(z.columns, layout.column_groups(len(z.columns))):
+        title = events_title(params.lang, params.events, params.rockets)
+        sections.append(("events", lambda c: _sec_events(c, model, events, title)))
+    groups = layout.column_groups(len(z.columns))
+    for col, group in zip(z.columns, groups):
         cur = Cursor(ctx, col)
         for name, fn in sections:
             if name in group:
                 fn(cur)
+    if z.span is not None and params.iss:
+        # ISS v pásu přes 1. + 2. sloupec: řádek přeletu se vejde na jednu řádku
+        _sec_iss(Cursor(ctx, z.span), model, iss_info)

@@ -24,8 +24,12 @@ def test_horizon_landscape_800x480():
     # jednořádková hlavička a tři sloupce: Slunce+ISS | Měsíc | úkazy (min. 6 řádků)
     assert z.header_line and not z.header_big and z.header.h == LINE_HEADER_H
     assert len(z.columns) == 3
-    assert z.columns[0].h >= 2 * 20 + 5 * 16 + 2 * 8      # Slunce + ISS
+    assert [c.w for c in z.columns] == [200, 200, 400]    # 25 / 25 / 50 %
+    assert z.columns[2].x == 400
     assert z.columns[2].h >= 20 + 6 * 16                  # úkazy: titulek + 6 řádků
+    # ISS v pásu přes oba úzké sloupce pod Sluncem a Měsícem
+    assert z.span is not None and z.span.x == 0 and z.span.w == 400
+    assert z.span.y >= z.columns[0].y + 20 + 3 * 16 and z.span.h >= 20 + 2 * 16
     assert z.map.h > 288 and z.map.h + z.info.h == 480
 
 
@@ -79,7 +83,7 @@ def test_column_groups():
     from sky.layout import column_groups
     assert column_groups(1) == (("sun", "moon", "iss", "events"),)
     assert column_groups(2) == (("sun", "moon"), ("iss", "events"))
-    assert column_groups(3) == (("sun", "iss"), ("moon",), ("events",))
+    assert column_groups(3) == (("sun",), ("moon",), ("events",))   # ISS jde do pásu přes 1.+2. sloupec
 
 
 def test_horizon_map_capped_at_90_degrees():
@@ -91,3 +95,8 @@ def test_horizon_map_capped_at_90_degrees():
     # při fov 180 se strop uplatní i ve výchozím rozložení
     z = compute(480, 800, "horizon", fov=180)
     assert z.map.h <= 480 * 90 // 180 + HORIZON_BAR
+
+
+def test_span_only_with_three_columns():
+    assert compute(480, 800, "horizon").span is None
+    assert compute(800, 480, "sky").span is None
