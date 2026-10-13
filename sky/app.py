@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import secrets
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import PlainTextResponse
@@ -25,7 +26,7 @@ def create_app(cfg: config.Config | None = None) -> FastAPI:
     @app.get("/sky.{fmt}")
     def sky(fmt: str, request: Request):
         q = dict(request.query_params)
-        if cfg.token and q.get("token") != cfg.token:
+        if cfg.token and not secrets.compare_digest(q.get("token", ""), cfg.token):
             return PlainTextResponse("forbidden", status_code=403)
         try:
             params = parse(q, cfg, fmt)

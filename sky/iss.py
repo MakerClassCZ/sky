@@ -1,6 +1,7 @@
 """ISS: TLE z Celestrak s cache, aktuální poloha, nejbližší viditelný přelet (spec §6.2)."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -10,6 +11,7 @@ from sky.config import Config
 from sky.netcache import fetch_text
 from sky.params import Params
 
+log = logging.getLogger(__name__)
 TLE_MAX_AGE_S = 86400
 MIN_ALT = 10.0
 CIVIL_DUSK = -6.0
@@ -80,10 +82,14 @@ def compute(params: Params, eph, tle, t: datetime | None) -> IssInfo:
     if tle is None or eph is None or not eph.available or t is None:
         return IssInfo(False, None, None, None)
     name, l1, l2 = tle
-    sat = EarthSatellite(l1, l2, name, eph.ts)
-    topos = wgs84.latlon(params.lat, params.lon)
-    observer = eph.eph["earth"] + topos
-    tt = eph.ts.from_datetime(t)
-    alt, az, _ = (sat - topos).at(tt).altaz()
-    passes = find_visible_passes(sat, observer, topos, eph, tt, eph.ts.from_datetime(t + LOOKAHEAD))
+    try:
+        sat = EarthSatellite(l1, l2, name, eph.ts)
+        topos = wgs84.latlon(params.lat, params.lon)
+        observer = eph.eph["earth"] + topos
+        tt = eph.ts.from_datetime(t)
+        alt, az, _ = (sat - topos).at(tt).altaz()
+        passes = find_visible_passes(sat, observer, topos, eph, tt, eph.ts.from_datetime(t + LOOKAHEAD))
+    except Exception as exc:  # noqa: BLE001 – vadné TLE ze sítě nesmí shodit render
+        log.warning("ISS: výpočet selhal (%s)", type(exc).__name__)
+        return IssInfo(False, None, None, None)
     return IssInfo(True, float(alt.degrees), float(az.degrees), passes[0] if passes else None)
