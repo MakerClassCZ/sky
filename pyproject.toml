@@ -30,3 +30,4 @@ sky = ["data/*", "fonts/*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["ephem: needs de421.bsp in SKY_CACHE_DIR"]
+asyncio_default_fixture_loop_scope = "function"
