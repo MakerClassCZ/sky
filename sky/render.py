@@ -21,6 +21,7 @@ from sky.projection import HorizonProjection, SkyProjection, clip_segment_circle
 STAR_SIZES = ((1.0, 5), (2.0, 4), (3.0, 3), (4.0, 2), (99.0, 1))
 LINE_MIN_ALT = -15.0
 LABEL_MIN_ALT = 10.0
+LABEL_MIN_MAP = 300       # popisky souhvězdí jen na mapách aspoň takto velkých (px)
 HORIZON_BAR = 24          # pás pod obzorem u `horizon` pro světové strany
 Box = tuple[int, int, int, int]
 
@@ -71,9 +72,8 @@ def _dot(ctx: Ctx, x: float, y: float, px: int, idx: int) -> None:
         ctx.d.ellipse((x - r, y - r, x + r, y + r), fill=idx)
 
 
-def _planet(ctx: Ctx, x: float, y: float, name: str) -> None:
+def _planet(ctx: Ctx, x: float, y: float) -> None:
     ctx.d.ellipse((x - 3.5, y - 3.5, x + 3.5, y + 3.5), fill=ctx.pal["planet"], outline=ctx.pal["fg"])
-    draw_text(ctx.img, (x + 6, y - 8), name, ctx.small, ctx.pal["label"])
 
 
 def _moon(ctx: Ctx, x: float, y: float, phase_deg: float, r: int = 8) -> None:
@@ -104,33 +104,63 @@ def _iss_marker(ctx: Ctx, x: float, y: float) -> None:
     c = ctx.pal["iss"]
     ctx.d.line((x - 4, y, x + 4, y), fill=c)
     ctx.d.line((x, y - 4, x, y + 4), fill=c)
-    draw_text(ctx.img, (x + 6, y - 8), "ISS", ctx.small, c)
+
+
+def _overlaps(a: Box, b: Box) -> bool:
+    return a[0] < b[2] and a[2] > b[0] and a[1] < b[3] and a[3] > b[1]
+
+
+def choose_box(placed: list[Box], w: int, h: int, candidates, bounds) -> Box | None:
+    """První kandidát (x0, y0), jehož box je v hranicích a nekoliduje s `placed`; neregistruje."""
+    for x0, y0 in candidates:
+        box = (int(x0), int(y0), int(x0) + w, int(y0) + h)
+        if bounds(box) and not any(_overlaps(box, b) for b in placed):
+            return box
+    return None
+
+
+def _label(ctx: Ctx, placed: list[Box], text: str, idx: int, candidates, bounds) -> None:
+    box = choose_box(placed, text_width(ctx.small, text), ctx.small.height, candidates, bounds)
+    if box is None:
+        return
+    placed.append(box)
+    draw_text(ctx.img, (box[0], box[1]), text, ctx.small, idx)
 
 
 def _place_label(ctx: Ctx, placed: list[Box], x: float, y: float, text: str, bounds) -> None:
-    """Popisek vystředěný na (x, y); vynechá se mimo hranice nebo při kolizi."""
+    """Popisek souhvězdí vystředěný na (x, y); vynechá se mimo hranice nebo při kolizi."""
     w, h = text_width(ctx.small, text), ctx.small.height
-    x0, y0 = int(x - w / 2), int(y - h / 2)
-    box = (x0, y0, x0 + w, y0 + h)
-    if not bounds(box):
-        return
-    for b in placed:
-        if box[0] < b[2] and box[2] > b[0] and box[1] < b[3] and box[3] > b[1]:
-            return
-    placed.append(box)
-    draw_text(ctx.img, (x0, y0), text, ctx.small, ctx.pal["label"])
+    _label(ctx, placed, text, ctx.pal["label"], [(x - w / 2, y - h / 2)], bounds)
 
 
-def _draw_bodies(ctx: Ctx, project, visible, model: SkyModel, iss_info: IssInfo, params: Params) -> None:
+def _body_label(ctx: Ctx, placed: list[Box], x: float, y: float, text: str, idx: int, bounds) -> None:
+    """Popisek tělesa: vpravo, vlevo, nad, pod – první volná pozice. Glyf sám se registruje."""
+    placed.append((int(x) - 5, int(y) - 5, int(x) + 6, int(y) + 6))
+    w, h = text_width(ctx.small, text), ctx.small.height
+    _label(ctx, placed, text, idx,
+           [(x + 6, y - h / 2), (x - 6 - w, y - h / 2), (x - w / 2, y - 7 - h), (x - w / 2, y + 7)], bounds)
+
+
+def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
+                 model: SkyModel, iss_info: IssInfo, params: Params) -> None:
+    """Tělesa a jejich popisky; glyfy i popisky se registrují do `placed`."""
     for b in model.planets:
         if visible(b.alt, b.az):
-            _planet(ctx, *project(b.alt, b.az), b.name)
+            x, y = project(b.alt, b.az)
+            _planet(ctx, x, y)
+            _body_label(ctx, placed, x, y, b.name, ctx.pal["label"], bounds)
     if visible(model.moon.alt, model.moon.az):
-        _moon(ctx, *project(model.moon.alt, model.moon.az), model.moon.phase_deg)
+        x, y = project(model.moon.alt, model.moon.az)
+        _moon(ctx, x, y, model.moon.phase_deg)
+        placed.append((int(x) - 9, int(y) - 9, int(x) + 10, int(y) + 10))
     if model.mode == "day" and visible(model.sun.alt, model.sun.az):
-        _sun(ctx, *project(model.sun.alt, model.sun.az))
+        x, y = project(model.sun.alt, model.sun.az)
+        _sun(ctx, x, y)
+        placed.append((int(x) - 11, int(y) - 11, int(x) + 12, int(y) + 12))
     if params.iss and iss_info.available and iss_info.alt is not None and visible(iss_info.alt, iss_info.az):
-        _iss_marker(ctx, *project(iss_info.alt, iss_info.az))
+        x, y = project(iss_info.alt, iss_info.az)
+        _iss_marker(ctx, x, y)
+        _body_label(ctx, placed, x, y, "ISS", ctx.pal["iss"], bounds)
 
 
 def _draw_lines(ctx: Ctx, model: SkyModel, clip, wraps, ox: int, oy: int) -> None:
@@ -174,11 +204,12 @@ def _draw_sky(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: IssI
                    for px, py in ((b[0], b[1]), (b[2], b[3]), (b[0], b[3]), (b[2], b[1])))
 
     placed: list[Box] = []
-    for text, alt, az in model.labels:
-        if alt >= LABEL_MIN_ALT:
-            x, y = project(alt, az)
-            _place_label(ctx, placed, x, y, text, inside_circle)
-    _draw_bodies(ctx, project, visible, model, iss_info, params)
+    _draw_bodies(ctx, placed, inside_circle, project, visible, model, iss_info, params)
+    if m.w >= LABEL_MIN_MAP:
+        for text, alt, az in model.labels:
+            if alt >= LABEL_MIN_ALT:
+                x, y = project(alt, az)
+                _place_label(ctx, placed, x, y, text, inside_circle)
     ctx.d.ellipse((cx - R + ox, cy - R + oy, cx + R + ox, cy + R + oy), outline=ctx.pal["horizon"], width=1)
 
     font = ctx.mid if m.w >= 300 else ctx.small
@@ -216,11 +247,12 @@ def _draw_horizon(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: 
         return b[0] >= ox and b[2] <= ox + m.w and b[1] >= oy and b[3] <= oy + mh
 
     placed: list[Box] = []
-    for text, alt, az in model.labels:
-        if alt >= LABEL_MIN_ALT and proj.visible(alt, az):
-            x, y = project(alt, az)
-            _place_label(ctx, placed, x, y, text, inside_rect)
-    _draw_bodies(ctx, project, proj.visible, model, iss_info, params)
+    _draw_bodies(ctx, placed, inside_rect, project, proj.visible, model, iss_info, params)
+    if mh >= LABEL_MIN_MAP // 2:
+        for text, alt, az in model.labels:
+            if alt >= LABEL_MIN_ALT and proj.visible(alt, az):
+                x, y = project(alt, az)
+                _place_label(ctx, placed, x, y, text, inside_rect)
 
     hy = oy + mh - 1
     ctx.d.line((ox, hy, ox + m.w - 1, hy), fill=ctx.pal["horizon"], width=1)

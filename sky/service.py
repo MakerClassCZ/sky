@@ -39,7 +39,8 @@ def build(params: Params, cfg: Config, now: datetime | None = None) -> Result:
         return hit[1]
     eph = astro.get_ephemeris(cfg.cache_dir)
     if not eph.available:
-        raise EphemerisMissing(f"chybí {astro.EPHEMERIS} v {cfg.cache_dir}; spusť `python -m sky warmup`")
+        log.error("chybí %s v %s", astro.EPHEMERIS, cfg.cache_dir)
+        raise EphemerisMissing(f"chybí efemerida {astro.EPHEMERIS}; spusť `python -m sky warmup`")
     t0 = time.perf_counter()
     model = astro.compute(params, eph, load_catalog(), params.lang, t)
     if params.iss:

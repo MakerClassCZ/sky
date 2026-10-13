@@ -36,6 +36,7 @@ def test_missing_ephemeris_503(tmp_path):
     c = client({"SKY_CACHE_DIR": str(tmp_path)})
     r = c.get("/sky.png?lat=49&lon=13")
     assert r.status_code == 503
+    assert str(tmp_path) not in r.text and "warmup" in r.text
 
 
 @ephem

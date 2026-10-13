@@ -2,6 +2,7 @@
 import io
 import logging
 import urllib.request
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -54,3 +55,23 @@ def test_token_compare_accepts_correct_token():
     # špatný token → 403, správný → projde až k parametrům (400 kvůli lat mimo rozsah)
     assert c.get("/sky.png?lat=99&lon=1&token=s3cre").status_code == 403
     assert c.get("/sky.png?lat=99&lon=1&token=s3cret").status_code == 400
+
+
+def test_serve_binds_localhost_by_default():
+    from sky.cli import build_parser
+    a = build_parser().parse_args(["serve"])
+    assert a.host == "127.0.0.1" and a.port == 8080
+
+
+def test_log_hides_userinfo(tmp_path, monkeypatch, caplog):
+    monkeypatch.setattr(netcache, "_download", lambda url, timeout: (_ for _ in ()).throw(OSError("net")))
+    with caplog.at_level(logging.WARNING):
+        netcache.fetch_text("https://user:pw@h.example/p.ics", tmp_path / "x", 10)
+    assert "pw" not in caplog.text and "h.example/p.ics" in caplog.text
+
+
+@pytest.mark.skipif(not Path("cache/de421.bsp").exists(), reason="de421.bsp missing")
+def test_render_failure_is_500_not_crash():
+    c = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache"})), raise_server_exceptions=False)
+    r = c.get("/sky.png?lat=49&lon=13&t=2300-01-01T00:00Z")   # mimo rozsah efemeridy
+    assert r.status_code == 500 and "vykreslení selhalo" in r.text and "cache" not in r.text

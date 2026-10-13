@@ -12,7 +12,7 @@ from sky.params import ParamError, parse
 QUERY_KEYS = ("lat", "lon", "view", "az", "fov", "w", "h", "colors", "rot", "t", "lang")
 
 
-def main(argv=None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="sky", description="Aktuální obloha pro e-paper.")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -23,13 +23,16 @@ def main(argv=None) -> int:
     r.add_argument("--no-events", action="store_true")
     r.add_argument("--out", required=True)
 
-    s = sub.add_parser("serve", help="spustí HTTP službu")
-    s.add_argument("--host", default="0.0.0.0")
+    s = sub.add_parser("serve", help="spustí HTTP službu (v kontejneru použij --host 0.0.0.0)")
+    s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8080)
 
     sub.add_parser("warmup", help="stáhne efemeridu do cache")
+    return ap
 
-    a = ap.parse_args(argv)
+
+def main(argv=None) -> int:
+    a = build_parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO)
     cfg = config.load()
 

@@ -25,9 +25,9 @@ def _download(url: str, timeout: float) -> str:
 
 
 def _safe_url(url: str) -> str:
-    """URL bez query (může nést tajný token) pro log."""
+    """URL bez query a bez user:pass (mohou nést tajemství) pro log."""
     s = urllib.parse.urlsplit(url)
-    return f"{s.netloc}{s.path}"
+    return f"{s.hostname or ''}{s.path}"
 
 
 def fetch_text(url: str, path: Path, max_age_s: int, timeout: float = 10.0) -> str | None:

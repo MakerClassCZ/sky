@@ -36,6 +36,9 @@ def create_app(cfg: config.Config | None = None) -> FastAPI:
             res = service.build(params, cfg)
         except service.EphemerisMissing as exc:
             return PlainTextResponse(str(exc), status_code=503)
+        except Exception:  # noqa: BLE001 – detail do logu, klientovi jen obecná hláška
+            log.exception("render failed for %s", params)
+            return PlainTextResponse("vykreslení selhalo", status_code=500)
         return Response(res.data, media_type=res.mime,
                         headers={"Cache-Control": "no-store", "X-Sky-Mode": res.mode})
 
