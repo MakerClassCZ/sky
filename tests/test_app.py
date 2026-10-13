@@ -77,6 +77,8 @@ def test_configurator_page():
     c = client({"SKY_CACHE_DIR": "cache"})
     r = c.get("/")
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/html")
-    for name in ("lat", "lon", "view", "az", "fov", "w", "h", "colors", "rot", "t", "iss", "events", "lang", "token"):
+    for name in ("lat", "lon", "view", "az", "fov", "w", "h", "colors", "rot", "t", "iss", "events", "lang", "mode", "weather", "ecliptic", "rockets", "lines"):
         assert f'name="{name}"' in r.text, name
     assert "/sky." in r.text
+    assert 'name="token"' not in r.text and 'name="base"' not in r.text   # veřejné rozhraní bez tokenu a adresy služby
+    assert ">Spectra6<" in r.text and ">BWRY<" in r.text

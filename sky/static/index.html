@@ -156,10 +156,10 @@
         <label class="f">Výška (px) <input name="h" type="number" min="64" max="2000" value="480"></label>
       </div>
       <div class="seg">
-        <label><input type="radio" name="colors" value="bw" checked><span>Černobílý</span></label>
-        <label><input type="radio" name="colors" value="bwr"><span>+ červená</span></label>
-        <label><input type="radio" name="colors" value="bwry"><span>+ červená a žlutá</span></label>
-        <label><input type="radio" name="colors" value="spectra"><span>Spectra 6</span></label>
+        <label><input type="radio" name="colors" value="bw" checked><span>BW</span></label>
+        <label><input type="radio" name="colors" value="bwr"><span>BWR</span></label>
+        <label><input type="radio" name="colors" value="bwry"><span>BWRY</span></label>
+        <label><input type="radio" name="colors" value="spectra"><span>Spectra6</span></label>
       </div>
       <label class="f">Spojnice souhvězdí
         <select name="lines"><option value="solid">plné</option><option value="dashed">čárkované</option><option value="dotted">tečkované</option></select>
@@ -202,12 +202,7 @@
       </div>
     </fieldset>
 
-    <fieldset>
-      <legend>Služba</legend>
-      <label class="f">Adresa služby <input name="base" type="url" placeholder="https://sky.vase-domena.cz"></label>
-      <label class="f">Token (je-li nastaven SKY_TOKEN) <input name="token" type="text"></label>
-      <p class="hint">Nastavení se ukládá v tomto prohlížeči.</p>
-    </fieldset>
+    <p class="hint">Nastavení si tento prohlížeč pamatuje.</p>
   </form>
 </main>
 
@@ -258,13 +253,10 @@
     if (val('mode') !== 'auto') p.set('mode', val('mode'));
     if (!q('weather').checked) p.set('weather', '0');
     if (!q('ecliptic').checked) p.set('ecliptic', '0');
-    if (val('token')) p.set('token', val('token'));
     return p;
   }
 
   function base() {
-    const b = val('base').trim().replace(/\/+$/, '');
-    if (b) return b;
     return location.protocol.startsWith('http') ? location.origin : '';
   }
 
@@ -282,7 +274,7 @@
         ? 'Displej bude ukazovat oblohu dnešního dne v ' + val('clock') + ' místního času.'
         : 'Čas pro náhled se do adresy pro displej nepřidává. Pro pevný čas připojte &t=' + localIso(tField.value) + '.';
     const b = base();
-    if (!b) { status.textContent = 'Vyplňte adresu služby, náhled se načte z ní.'; return; }
+    if (!b) { status.textContent = 'Stránku otevřete z běžící služby (http), náhled se načítá z ní.'; return; }
     if (ctrl) ctrl.abort();
     ctrl = new AbortController();
     img.classList.add('loading');

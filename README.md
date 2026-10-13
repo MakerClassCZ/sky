@@ -25,8 +25,8 @@ python -m sky serve --port 8080     # http://127.0.0.1:8080/sky.png?lat=49.747&l
 Na kořenové adrese služby (`/`) je konfigurační stránka: naklikáte stanoviště,
 pohled, rozměr a paletu panelu, čas pro náhled a obsah, vidíte živý náhled
 přesně v pixelech panelu a zkopírujete hotovou adresu pro Živý obraz.
-Nastavení si pamatuje prohlížeč. Stránka funguje i otevřená ze souboru
-(`sky/static/index.html`), pak vyplňte adresu služby v poslední sekci.
+Nastavení si pamatuje prohlížeč. Stránka je určená pro veřejnou instanci bez
+tokenu; adresu služby si bere z adresy, na které běží.
 
 ## HTTP rozhraní
 
