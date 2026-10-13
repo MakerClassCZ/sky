@@ -4,18 +4,26 @@ from __future__ import annotations
 import logging
 import secrets
 
+from pathlib import Path
+
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 
 from sky import astro, config, service
 from sky.params import ParamError, parse
 
 log = logging.getLogger(__name__)
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 def create_app(cfg: config.Config | None = None) -> FastAPI:
     cfg = cfg or config.load()
     app = FastAPI(title="sky-epaper", docs_url=None, redoc_url=None)
+
+    @app.get("/", include_in_schema=False)
+    def index():
+        return FileResponse(STATIC_DIR / "index.html", media_type="text/html",
+                            headers={"Cache-Control": "no-cache"})
 
     @app.get("/health")
     def health():

@@ -25,7 +25,7 @@ build-backend = "setuptools.build_meta"
 include = ["sky*"]
 
 [tool.setuptools.package-data]
-sky = ["data/*", "fonts/*"]
+sky = ["data/*", "fonts/*", "static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

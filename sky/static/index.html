@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sky – nastavení panelu</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2310203a'/%3E%3Ccircle cx='8' cy='8' r='5.5' fill='none' stroke='%23f2f1ec'/%3E%3Ccircle cx='6' cy='7' r='1' fill='%23f2f1ec'/%3E%3Ccircle cx='10' cy='9' r='1' fill='%23f2f1ec'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --night: #10203a;
+    --night-deep: #0a1628;
+    --ink: #dfe6f0;
+    --ink-dim: #93a3b8;
+    --line: #27405f;
+    --field: #0d1b31;
+    --paper: #f2f1ec;
+    --red: #c8302a;
+    --focus: #f0d98a;
+    --gap: 14px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { background: var(--night); color: var(--ink); }
+  body {
+    margin: 0;
+    font: 15px/1.45 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  header {
+    padding: 22px 28px 10px;
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: .01em; }
+  header p { margin: 0; color: var(--ink-dim); }
+  main {
+    display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px;
+    padding: 0 28px 40px; max-width: 1400px;
+  }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+
+  /* --- náhled: jediný světlý objekt na stránce --- */
+  .stage { position: sticky; top: 16px; align-self: start; }
+  .panel {
+    background: var(--night-deep); border: 1px solid var(--line); border-radius: 6px;
+    padding: 18px; min-height: 200px; display: grid; place-items: center;
+  }
+  .panel img {
+    max-width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges;
+    background: var(--paper); box-shadow: 0 0 0 1px #000, 0 14px 40px rgba(0,0,0,.45);
+  }
+  .panel img[hidden] { display: none; }
+  .status { margin: 10px 2px 0; color: var(--ink-dim); min-height: 1.4em; }
+  .status.err { color: #ff9a8f; }
+
+  .url { margin-top: 18px; }
+  .url label { display: block; color: var(--ink-dim); margin-bottom: 6px; }
+  .url .row { display: flex; gap: 8px; }
+  .url input { flex: 1; font-size: 13px; }
+  .url small { display: block; margin-top: 6px; color: var(--ink-dim); }
+
+  /* --- formulář --- */
+  form { display: grid; gap: 22px; align-content: start; }
+  fieldset { border: 0; border-top: 1px solid var(--line); padding: 14px 0 0; margin: 0; display: grid; gap: 10px; }
+  legend { padding: 0 8px 0 0; font-weight: 600; color: var(--ink); }
+  fieldset p.hint { margin: -4px 0 0; color: var(--ink-dim); font-size: 13px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  label.f { display: grid; gap: 4px; color: var(--ink-dim); font-size: 13px; }
+  label.f > span.v { color: var(--ink); font-size: 15px; }
+  input, select, button {
+    font: inherit; color: var(--ink); background: var(--field);
+    border: 1px solid var(--line); border-radius: 4px; padding: 7px 9px; min-height: 36px;
+  }
+  input[type=range] { padding: 0; min-height: 28px; accent-color: var(--focus); }
+  input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg label { cursor: pointer; }
+  .seg input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .seg span {
+    display: inline-block; padding: 6px 11px; border: 1px solid var(--line); border-radius: 4px;
+    background: var(--field); color: var(--ink-dim);
+  }
+  .seg input:checked + span { background: var(--ink); color: var(--night-deep); border-color: var(--ink); }
+  .seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .check { display: flex; align-items: center; gap: 8px; color: var(--ink); }
+  .check input { width: 18px; height: 18px; min-height: 0; accent-color: var(--focus); }
+  button.primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; cursor: pointer; }
+  button.quiet { cursor: pointer; color: var(--ink-dim); }
+  button.quiet:hover, button.primary:hover { filter: brightness(1.12); }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .presets button { padding: 4px 9px; min-height: 30px; font-size: 13px; }
+  @media (prefers-reduced-motion: no-preference) { .panel img { transition: opacity .15s; } }
+  .panel img.loading { opacity: .55; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sky – nastavení panelu</h1>
+  <p>Nastavte, co má displej ukazovat; náhled je přesně to, co dostane.</p>
+</header>
+
+<main>
+  <section class="stage">
+    <div class="panel">
+      <img id="preview" alt="Náhled panelu" hidden>
+    </div>
+    <div class="status" id="status">Načítám náhled…</div>
+
+    <div class="url">
+      <label for="url">Adresa pro Živý obraz (zdroj „obrázek z URL“)</label>
+      <div class="row">
+        <input id="url" readonly>
+        <button type="button" class="primary" id="copy">Kopírovat</button>
+      </div>
+      <small id="urlnote">Čas se do adresy nepřidává; displej dostane vždy aktuální oblohu.</small>
+    </div>
+  </section>
+
+  <form id="f" autocomplete="off">
+    <fieldset>
+      <legend>Stanoviště</legend>
+      <div class="grid2">
+        <label class="f">Zeměpisná šířka <input name="lat" type="number" step="0.0001" min="-90" max="90" value="49.747"></label>
+        <label class="f">Zeměpisná délka <input name="lon" type="number" step="0.0001" min="-180" max="180" value="13.378"></label>
+      </div>
+      <button type="button" class="quiet" id="geo">Použít polohu tohoto zařízení</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Pohled</legend>
+      <div class="seg">
+        <label><input type="radio" name="view" value="sky" checked><span>Celá obloha</span></label>
+        <label><input type="radio" name="view" value="horizon"><span>Z okna (výsek obzoru)</span></label>
+      </div>
+      <label class="f">Směr <span class="v"><output id="azv">180° jih</output></span>
+        <input name="az" type="range" min="0" max="359" step="1" value="180">
+      </label>
+      <p class="hint" id="azhint">U celé oblohy je tento směr dole, tedy před vámi.</p>
+      <label class="f" id="fovrow" hidden>Šířka výseku <span class="v"><output id="fovv">120°</output></span>
+        <input name="fov" type="range" min="30" max="180" step="5" value="120">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Panel</legend>
+      <div class="presets">
+        <button type="button" data-size="800x480">800×480</button>
+        <button type="button" data-size="480x800">480×800</button>
+        <button type="button" data-size="640x384">640×384</button>
+        <button type="button" data-size="400x300">400×300</button>
+        <button type="button" data-size="296x128">296×128</button>
+        <button type="button" id="swap">Otočit šířku a výšku</button>
+      </div>
+      <div class="grid2">
+        <label class="f">Šířka (px) <input name="w" type="number" min="64" max="2000" value="800"></label>
+        <label class="f">Výška (px) <input name="h" type="number" min="64" max="2000" value="480"></label>
+      </div>
+      <div class="seg">
+        <label><input type="radio" name="colors" value="bw" checked><span>Černobílý</span></label>
+        <label><input type="radio" name="colors" value="bwr"><span>+ červená</span></label>
+        <label><input type="radio" name="colors" value="bwry"><span>+ červená a žlutá</span></label>
+      </div>
+      <div class="grid2">
+        <label class="f">Formát
+          <select name="fmt"><option value="png">PNG</option><option value="bmp">BMP</option></select>
+        </label>
+        <label class="f">Otočení výstupu
+          <select name="rot"><option value="0">žádné</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Čas</legend>
+      <label class="check"><input type="checkbox" id="now" checked> Teď (displej dostává aktuální oblohu)</label>
+      <label class="f">Jiný čas pro náhled <input name="t" type="datetime-local" disabled></label>
+      <p class="hint">Čas se zadává v čase tohoto prohlížeče; do adresy se přidá jen při vypnutém „Teď“.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Obsah</legend>
+      <label class="check"><input type="checkbox" name="iss" checked> Přelety ISS</label>
+      <label class="check"><input type="checkbox" name="events" checked> Kalendář úkazů</label>
+      <div class="seg">
+        <label><input type="radio" name="lang" value="cs" checked><span>Česky</span></label>
+        <label><input type="radio" name="lang" value="en"><span>English</span></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Služba</legend>
+      <label class="f">Adresa služby <input name="base" type="url" placeholder="https://sky.vase-domena.cz"></label>
+      <label class="f">Token (je-li nastaven SKY_TOKEN) <input name="token" type="text"></label>
+      <p class="hint">Nastavení se ukládá v tomto prohlížeči.</p>
+    </fieldset>
+  </form>
+</main>
+
+<script>
+(() => {
+  const f = document.getElementById('f');
+  const img = document.getElementById('preview');
+  const status = document.getElementById('status');
+  const urlBox = document.getElementById('url');
+  const nowBox = document.getElementById('now');
+  const tField = f.elements.t;
+  const COMPASS = ['sever', 'severovýchod', 'východ', 'jihovýchod', 'jih', 'jihozápad', 'západ', 'severozápad'];
+  const STORE = 'sky-config';
+
+  const q = (name) => f.elements[name];
+  const val = (name) => q(name).value;
+
+  function compass(az) { return COMPASS[Math.round((az % 360) / 45) % 8]; }
+
+  function localIso(v) {            // datetime-local → ISO s offsetem prohlížeče
+    if (!v) return '';
+    const d = new Date(v);
+    const off = -d.getTimezoneOffset();
+    const s = off >= 0 ? '+' : '-';
+    const hh = String(Math.floor(Math.abs(off) / 60)).padStart(2, '0');
+    const mm = String(Math.abs(off) % 60).padStart(2, '0');
+    return v.length === 16 ? `${v}:00${s}${hh}:${mm}` : `${v}${s}${hh}:${mm}`;
+  }
+
+  function params(withTime) {
+    const p = new URLSearchParams();
+    p.set('lat', val('lat')); p.set('lon', val('lon'));
+    const view = val('view');
+    if (view !== 'sky') p.set('view', view);
+    if (val('az') !== '180') p.set('az', val('az'));
+    if (view === 'horizon' && val('fov') !== '120') p.set('fov', val('fov'));
+    if (val('w') !== '800') p.set('w', val('w'));
+    if (val('h') !== '480') p.set('h', val('h'));
+    if (val('colors') !== 'bw') p.set('colors', val('colors'));
+    if (val('rot') !== '0') p.set('rot', val('rot'));
+    if (!q('iss').checked) p.set('iss', '0');
+    if (!q('events').checked) p.set('events', '0');
+    if (val('lang') !== 'cs') p.set('lang', val('lang'));
+    if (withTime && !nowBox.checked && tField.value) p.set('t', localIso(tField.value));
+    if (val('token')) p.set('token', val('token'));
+    return p;
+  }
+
+  function base() {
+    const b = val('base').trim().replace(/\/+$/, '');
+    if (b) return b;
+    return location.protocol.startsWith('http') ? location.origin : '';
+  }
+
+  function buildUrl(withTime) {
+    return `${base()}/sky.${val('fmt')}?${params(withTime)}`;
+  }
+
+  let timer = null, ctrl = null;
+  async function refresh() {
+    urlBox.value = buildUrl(false);
+    document.getElementById('urlnote').textContent = nowBox.checked
+      ? 'Čas se do adresy nepřidává; displej dostane vždy aktuální oblohu.'
+      : 'Čas pro náhled se do adresy pro displej nepřidává. Pro pevný čas připojte &t=' + localIso(tField.value) + '.';
+    const b = base();
+    if (!b) { status.textContent = 'Vyplňte adresu služby, náhled se načte z ní.'; return; }
+    if (ctrl) ctrl.abort();
+    ctrl = new AbortController();
+    img.classList.add('loading');
+    status.className = 'status'; status.textContent = 'Vykresluji…';
+    const t0 = performance.now();
+    try {
+      const r = await fetch(buildUrl(true), { signal: ctrl.signal, cache: 'no-store' });
+      if (!r.ok) { status.className = 'status err'; status.textContent = `${r.status}: ${await r.text()}`; img.classList.remove('loading'); return; }
+      const blob = await r.blob();
+      const mode = r.headers.get('x-sky-mode') === 'day' ? 'den' : 'noc';
+      const old = img.src;
+      img.src = URL.createObjectURL(blob);
+      img.hidden = false;
+      if (old.startsWith('blob:')) URL.revokeObjectURL(old);
+      status.textContent = `${val('w')}×${val('h')} px, ${mode}, ${(blob.size / 1024).toFixed(1)} kB, ${Math.round(performance.now() - t0)} ms`;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+      status.className = 'status err'; status.textContent = 'Službu se nepodařilo zavolat: ' + e.message;
+    } finally { img.classList.remove('loading'); }
+  }
+  function schedule() { clearTimeout(timer); timer = setTimeout(refresh, 350); }
+
+  function syncUi() {
+    const view = val('view');
+    document.getElementById('fovrow').hidden = view !== 'horizon';
+    document.getElementById('azhint').textContent = view === 'horizon'
+      ? 'Směr, kterým se díváte z okna; výsek je rozložen symetricky kolem něj.'
+      : 'U celé oblohy je tento směr dole, tedy před vámi.';
+    document.getElementById('azv').textContent = `${val('az')}° ${compass(+val('az'))}`;
+    document.getElementById('fovv').textContent = `${val('fov')}°`;
+    tField.disabled = nowBox.checked;
+    if (!nowBox.checked && !tField.value) {
+      const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      tField.value = d.toISOString().slice(0, 16);
+    }
+  }
+
+  function save() {
+    const o = {};
+    for (const el of f.elements) {
+      if (!el.name) continue;
+      if (el.type === 'radio') { if (el.checked) o[el.name] = el.value; }
+      else if (el.type === 'checkbox') o[el.name] = el.checked;
+      else o[el.name] = el.value;
+    }
+    o.now = nowBox.checked;
+    localStorage.setItem(STORE, JSON.stringify(o));
+  }
+  function load() {
+    let o; try { o = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { o = {}; }
+    for (const el of f.elements) {
+      if (!el.name || !(el.name in o)) continue;
+      if (el.type === 'radio') el.checked = el.value === o[el.name];
+      else if (el.type === 'checkbox') el.checked = !!o[el.name];
+      else el.value = o[el.name];
+    }
+    if ('now' in o) nowBox.checked = !!o.now;
+  }
+
+  f.addEventListener('input', () => { syncUi(); save(); schedule(); });
+  nowBox.addEventListener('change', () => { syncUi(); save(); schedule(); });
+
+  for (const b of document.querySelectorAll('[data-size]')) {
+    b.addEventListener('click', () => {
+      const [w, h] = b.dataset.size.split('x');
+      q('w').value = w; q('h').value = h; save(); schedule();
+    });
+  }
+  document.getElementById('swap').addEventListener('click', () => {
+    const w = q('w').value; q('w').value = q('h').value; q('h').value = w; save(); schedule();
+  });
+  document.getElementById('geo').addEventListener('click', () => {
+    if (!navigator.geolocation) { status.textContent = 'Prohlížeč polohu neposkytuje.'; return; }
+    navigator.geolocation.getCurrentPosition(
+      (p) => { q('lat').value = p.coords.latitude.toFixed(4); q('lon').value = p.coords.longitude.toFixed(4); save(); schedule(); },
+      () => { status.className = 'status err'; status.textContent = 'Polohu se nepodařilo zjistit; zadejte ji ručně.'; });
+  });
+  document.getElementById('copy').addEventListener('click', async () => {
+    const btn = document.getElementById('copy');
+    try { await navigator.clipboard.writeText(urlBox.value); btn.textContent = 'Zkopírováno'; }
+    catch { urlBox.select(); document.execCommand('copy'); btn.textContent = 'Zkopírováno'; }
+    setTimeout(() => { btn.textContent = 'Kopírovat'; }, 1500);
+  });
+
+  load(); syncUi(); refresh();
+})();
+</script>
+</body>
+</html>

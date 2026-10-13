@@ -20,9 +20,18 @@ python -m sky render --lat 49.747 --lon 13.378 --out obloha.png
 python -m sky serve --port 8080     # http://127.0.0.1:8080/sky.png?lat=49.747&lon=13.378
 ```
 
+## Nastavení v prohlížeči
+
+Na kořenové adrese služby (`/`) je konfigurační stránka: naklikáte stanoviště,
+pohled, rozměr a paletu panelu, čas pro náhled a obsah, vidíte živý náhled
+přesně v pixelech panelu a zkopírujete hotovou adresu pro Živý obraz.
+Nastavení si pamatuje prohlížeč. Stránka funguje i otevřená ze souboru
+(`sky/static/index.html`), pak vyplňte adresu služby v poslední sekci.
+
 ## HTTP rozhraní
 
 ```
+GET /                      # konfigurační stránka
 GET /sky.png?lat=49.747&lon=13.378&az=180&view=sky&w=800&h=480&colors=bw
 GET /sky.bmp?lat=49.747&lon=13.378&view=horizon&az=200&fov=120&colors=bwry&w=480&h=800
 GET /health

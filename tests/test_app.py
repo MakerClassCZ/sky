@@ -71,3 +71,12 @@ def test_render_cache_hit(monkeypatch):
     assert c.get(url).status_code == 200
     assert c.get(url).status_code == 200
     assert len(calls) == 1
+
+
+def test_configurator_page():
+    c = client({"SKY_CACHE_DIR": "cache"})
+    r = c.get("/")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/html")
+    for name in ("lat", "lon", "view", "az", "fov", "w", "h", "colors", "rot", "t", "iss", "events", "lang", "token"):
+        assert f'name="{name}"' in r.text, name
+    assert "/sky." in r.text
