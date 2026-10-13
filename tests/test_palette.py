@@ -31,7 +31,7 @@ def test_spectra_roles():
     assert p.ncolors == 6 and len(p.flat()) == 18
     assert p.flat()[12:] == [0, 0, 255, 0, 255, 0]          # 4 = modrá, 5 = zelená
     assert p["sun"] == 3 and p["planet"] == 2 and p["today"] == 2
-    assert p["iss"] == 5 and p["horizon"] == 4
+    assert p["iss"] == 5 and p["horizon"] == p["fg"]      # obzor a světové strany zůstávají ve fg (modrá je špatně čitelná)
     assert p["moon_lit"] == p["fg"] and p["line"] == p["fg"]
 
 

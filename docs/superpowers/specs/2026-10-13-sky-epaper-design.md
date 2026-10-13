@@ -257,7 +257,7 @@ Role (`bg`, `fg`, `star`, `line`, `label`, `planet`, `sun`, `moon_lit`,
 - `bwry`: jako `bwr`, navíc `sun = 3` (Slunce žluté, planety červené). Měsíc
   zůstává černobílý, žlutý kotouč by nebyl k poznání (změna 2026-10-13).
 - `spectra` (E Ink Spectra 6, indexy 4 = modrá `#0000FF`, 5 = zelená `#00FF00`):
-  jako `bwry`, navíc `iss = 5`, `horizon = 4` (obzor a světové strany).
+  jako `bwry`, navíc `iss = 5`; modrá se nepoužívá (na obzoru byla špatně čitelná).
 
 PNG: `Image.save(format="PNG", optimize=True)`, bity na pixel podle počtu
 barev (1 bit pro `bw`, 2 bity pro ostatní – Pillow volí automaticky podle

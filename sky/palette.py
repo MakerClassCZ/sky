@@ -38,6 +38,5 @@ def make_palette(colors: str, mode: str) -> Palette:
     if colors in ("bwry", "spectra"):
         idx["sun"] = 3            # Měsíc zůstává černobílý: žlutý kotouč není k poznání
     if colors == "spectra":
-        idx["iss"] = 5            # zelená
-        idx["horizon"] = 4        # modrá: obzor a světové strany
+        idx["iss"] = 5            # zelená; modrá (4) se nepoužívá, na obzoru byla špatně čitelná
     return Palette(colors, mode, idx)

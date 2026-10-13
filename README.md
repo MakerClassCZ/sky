@@ -44,7 +44,7 @@ GET /health
 | `az` | 0..360 | `sky`: azimut dole (co máte před sebou); `horizon`: střed pohledu | `180` (jih) |
 | `fov` | 30..180 | jen `horizon`: šířka zorného pole ve stupních | `120` |
 | `w`, `h` | 64..2000 | rozměr v px; poměr stran určuje rozložení | `800`, `480` |
-| `colors` | `bw` \| `bwr` \| `bwry` \| `spectra` | paleta: červeně planety, ISS a dnešní úkaz; žlutě Slunce; `spectra` (6 barev) navíc zelenou ISS a modrý obzor. Měsíc je vždy černobílý | `bw` |
+| `colors` | `bw` \| `bwr` \| `bwry` \| `spectra` | paleta: červeně planety, ISS a dnešní úkaz; žlutě Slunce; `spectra` (6 barev) navíc zelenou ISS. Měsíc, obzor a texty jsou vždy černobílé | `bw` |
 | `rot` | 0 \| 90 \| 180 \| 270 | otočení hotového obrázku po směru hodin | `0` |
 | `t` | ISO 8601 | čas vykreslení (náhledy, testy); bez zóny = UTC; roky 1900–2050 (rozsah efemeridy) | teď |
 | `iss`, `events` | 0 \| 1 | vypnutí sekce ISS / úkazů | `1` |
