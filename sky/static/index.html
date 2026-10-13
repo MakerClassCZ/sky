@@ -30,7 +30,8 @@
   header { padding: 22px 28px 8px; display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
   header h1 { margin: 0; font-size: 22px; font-weight: 600; }
   header p { margin: 0; color: var(--ink-dim); }
-  main { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 28px; padding: 0 28px 24px; max-width: 1440px; }
+  /* Náhled si vezme jen svou šířku (1:1), formulář zbytek a skládá bloky do sloupců podle místa. */
+  main { display: grid; grid-template-columns: auto minmax(380px, 1fr); gap: 28px 36px; padding: 0 28px 24px; }
   @media (max-width: 1000px) {
     main { grid-template-columns: 1fr; }
     .stage { position: static; }
@@ -38,7 +39,7 @@
   }
 
   /* ---- náhled: rámeček displeje ---- */
-  .stage { position: sticky; top: 16px; align-self: start; }
+  .stage { position: sticky; top: 16px; align-self: start; width: fit-content; max-width: min(62vw, 1000px); }
   .device { background: var(--bezel); border-radius: 10px; padding: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.5); display: inline-block; max-width: 100%; }
   .device.fit { display: block; }
   .device.fit .screen { display: flex; justify-content: center; }
@@ -55,8 +56,10 @@
   .stageinfo .scale { color: var(--ink-dim); }
 
   /* ---- formulář ---- */
-  form { display: grid; gap: 26px; align-content: start; }
-  section.block { display: grid; gap: 12px; }
+  /* Bloky tečou do sloupců (šířka ≥ 340 px) a vyrovnávají se výškou, bez prázdných míst v řádcích. */
+  form { columns: 340px; column-gap: 32px; }
+  section.block { display: grid; gap: 12px; align-content: start; break-inside: avoid; margin-bottom: 24px; }
+  details { break-inside: avoid; column-span: all; }
   section.block > h2 { margin: 0; font-size: 15px; font-weight: 600; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
   .hint { margin: 0; color: var(--ink-dim); font-size: 13px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -115,7 +118,7 @@
   .bar label { color: var(--ink-dim); white-space: nowrap; }
   .bar input { flex: 1; min-width: 120px; font-size: 13px; }
   .bar a.open { color: var(--ink-dim); white-space: nowrap; }
-  @media (max-width: 640px) { .bar label { display: none; } .bar { padding: 10px 14px; } header, main { padding-left: 14px; padding-right: 14px; } }
+  @media (max-width: 640px) { .bar label { display: none; } .bar { padding: 10px 14px; } header, main { padding-left: 14px; padding-right: 14px; } form { columns: 1; } }
   @media (prefers-reduced-motion: no-preference) { .screen img { transition: opacity .15s; } }
   .screen img.loading { opacity: .55; }
 </style>
