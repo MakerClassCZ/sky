@@ -44,8 +44,9 @@ def render(params: Params, model: SkyModel, iss_info: IssInfo, events: list[Even
     img.putpalette(pal.flat())
     ctx = Ctx(img, ImageDraw.Draw(img), pal, params.lang,
               load_font("8x16"), load_font("12x24"), load_font("16x32"))
+    show_events = params.events or params.rockets
     sections = tuple(s for s in layout.ALL_SECTIONS
-                     if (s != "iss" or params.iss) and (s != "events" or params.events))
+                     if (s != "iss" or params.iss) and (s != "events" or show_events))
     zones = layout.compute(params.w, params.h, params.view, sections, params.fov)
     if params.view == "sky":
         _draw_sky(ctx, zones.map, params, model, iss_info)
@@ -75,7 +76,10 @@ def _dot(ctx: Ctx, x: float, y: float, px: int, idx: int) -> None:
         ctx.d.ellipse((x - r, y - r, x + r, y + r), fill=idx)
 
 
-def _planet(ctx: Ctx, x: float, y: float) -> None:
+def _planet(ctx: Ctx, x: float, y: float, key: str = "") -> None:
+    if key.startswith("saturn"):
+        # prstenec: plochá elipsa pod kotoučem, kotouč ji uprostřed překryje
+        ctx.d.ellipse((x - 8, y - 2.5, x + 8, y + 2.5), outline=ctx.pal["planet"])
     ctx.d.ellipse((x - 3.5, y - 3.5, x + 3.5, y + 3.5), fill=ctx.pal["planet"], outline=ctx.pal["fg"])
 
 
@@ -95,11 +99,11 @@ def _moon(ctx: Ctx, x: float, y: float, phase_deg: float, r: int = 8) -> None:
     ctx.d.ellipse((x - r, y - r, x + r, y + r), outline=ctx.pal["fg"])
 
 
-def _sun(ctx: Ctx, x: float, y: float, r: int = 5) -> None:
+def _sun(ctx: Ctx, x: float, y: float, r: int = 7) -> None:
     for k in range(8):
         a = math.radians(k * 45)
         ctx.d.line((x + (r + 2) * math.cos(a), y + (r + 2) * math.sin(a),
-                    x + (r + 5) * math.cos(a), y + (r + 5) * math.sin(a)), fill=ctx.pal["sun"])
+                    x + (r + 6) * math.cos(a), y + (r + 6) * math.sin(a)), fill=ctx.pal["sun"])
     ctx.d.ellipse((x - r, y - r, x + r, y + r), fill=ctx.pal["sun"], outline=ctx.pal["fg"])
 
 
@@ -140,8 +144,9 @@ def _body_label(ctx: Ctx, placed: list[Box], x: float, y: float, text: str, idx:
     """Popisek tělesa: vpravo, vlevo, nad, pod – první volná pozice. Glyf sám se registruje."""
     placed.append((int(x) - 5, int(y) - 5, int(x) + 6, int(y) + 6))
     w, h = text_width(ctx.small, text), ctx.small.height
+    gap = 11 if text == "Saturn" else 6     # Saturn má prstenec, popisek dál od středu
     _label(ctx, placed, text, idx,
-           [(x + 6, y - h / 2), (x - 6 - w, y - h / 2), (x - w / 2, y - 7 - h), (x - w / 2, y + 7)], bounds)
+           [(x + gap, y - h / 2), (x - gap - w, y - h / 2), (x - w / 2, y - 7 - h), (x - w / 2, y + 7)], bounds)
 
 
 def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
@@ -150,7 +155,9 @@ def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
     for b in model.planets:
         if visible(b.alt, b.az):
             x, y = project(b.alt, b.az)
-            _planet(ctx, x, y)
+            _planet(ctx, x, y, b.key)
+            if b.key.startswith("saturn"):
+                placed.append((int(x) - 9, int(y) - 4, int(x) + 10, int(y) + 5))
             _body_label(ctx, placed, x, y, b.name, ctx.pal["label"], bounds)
     if visible(model.moon.alt, model.moon.az):
         x, y = project(model.moon.alt, model.moon.az)
@@ -159,7 +166,7 @@ def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
     if model.mode == "day" and visible(model.sun.alt, model.sun.az):
         x, y = project(model.sun.alt, model.sun.az)
         _sun(ctx, x, y)
-        placed.append((int(x) - 11, int(y) - 11, int(x) + 12, int(y) + 12))
+        placed.append((int(x) - 14, int(y) - 14, int(x) + 15, int(y) + 15))
     if params.iss and iss_info.available and iss_info.alt is not None and visible(iss_info.alt, iss_info.az):
         x, y = project(iss_info.alt, iss_info.az)
         _iss_marker(ctx, x, y)
@@ -336,8 +343,14 @@ def _draw_header(ctx: Ctx, z: Zones, model: SkyModel) -> None:
     h = z.header
     local = model.t.astimezone(model.tz)
     x, y = h.x + layout.MARGIN, h.y + layout.MARGIN // 2
-    font = ctx.big if z.header_big else ctx.small
     maxw = h.w - 2 * layout.MARGIN
+    if z.header_line:
+        # datum větším písmem, čas a poloha menším na stejné lince
+        dw = draw_text(ctx.img, (x, y), fmt_date(local.date(), ctx.lang), ctx.mid, ctx.pal["fg"])
+        rest = f"{local.strftime('%H:%M')}  {fmt_coords(model.lat, model.lon)}"
+        draw_text(ctx.img, (x + dw + 16, y + 4), fit(ctx.small, rest, maxw - dw - 16), ctx.small, ctx.pal["fg"])
+        return
+    font = ctx.big if z.header_big else ctx.small
     draw_text(ctx.img, (x, y), fit(font, fmt_date(local.date(), ctx.lang), maxw), font, ctx.pal["fg"])
     y += font.height
     draw_text(ctx.img, (x, y), fit(ctx.small, f"{local.strftime('%H:%M')}  {fmt_coords(model.lat, model.lon)}", maxw),
@@ -401,7 +414,8 @@ def _sec_events(c: Cursor, model: SkyModel, events: list[Event] | None) -> None:
         is_today = e.date == today
         idx = c.ctx.pal["today"] if is_today else None
         box = is_today and c.ctx.pal.ncolors == 2
-        c.line(f"{e.date.day:>2}. {e.date.month:>2}. {e.title}", idx=idx, box=box)
+        when = f"{e.date.day:>2}. {e.date.month:>2}." + (f" {e.time}" if e.time else "")
+        c.line(f"{when} {e.title}", idx=idx, box=box)
 
 
 def _draw_info(ctx: Ctx, z: Zones, params: Params, model: SkyModel, iss_info: IssInfo,
@@ -410,7 +424,7 @@ def _draw_info(ctx: Ctx, z: Zones, params: Params, model: SkyModel, iss_info: Is
     sections = [("sun", lambda c: _sec_sun(c, model)), ("moon", lambda c: _sec_moon(c, model))]
     if params.iss:
         sections.append(("iss", lambda c: _sec_iss(c, model, iss_info)))
-    if params.events:
+    if params.events or params.rockets:
         sections.append(("events", lambda c: _sec_events(c, model, events)))
     for col, group in zip(z.columns, layout.column_groups(len(z.columns))):
         cur = Cursor(ctx, col)

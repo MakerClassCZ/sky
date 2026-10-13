@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sky import astro, events, iss, output, render
+from sky import astro, events, iss, output, render, rockets
 from sky.catalog import load_catalog
 from sky.config import Config
 from sky.params import Params
@@ -48,7 +48,10 @@ def build(params: Params, cfg: Config, now: datetime | None = None) -> Result:
         iss_info = iss.compute(params, eph, iss.load_tle(cfg), t)
     else:
         iss_info = iss.IssInfo(False, None, None, None)
-    evs = events.upcoming(cfg, t.astimezone(model.tz).date()) if params.events else []
+    today = t.astimezone(model.tz).date()
+    evs = events.upcoming(cfg, today) if params.events else []
+    if params.rockets:
+        evs = events.merge(evs or [], rockets.upcoming(cfg, today, model.tz), 12)
     img = render.render(params, model, iss_info, evs)
     data, mime = output.encode(img, params.fmt, params.rot)
     log.info("render %s %dx%d %s %s mode=%s %.0f ms", params.view, params.w, params.h, params.colors,

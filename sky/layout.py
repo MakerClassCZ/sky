@@ -15,23 +15,25 @@ HORIZON_BAR = 24            # pás pod obzorem pro světové strany (u `horizon`
 ALL_SECTIONS = ("sun", "moon", "iss", "events")
 SECTION_GAP = U // 2
 # výška sekce bez mezery: titulek (U + 4) + řádky; úkazy nemají pevnou výšku (plní, co zbývá)
-SECTION_H = {"sun": U + 4 + 3 * U, "moon": U + 4 + 3 * U, "iss": U + 4 + 2 * U}
+SECTION_H = {"sun": U + 4 + 3 * U, "moon": U + 4 + 3 * U, "iss": U + 4 + 2 * U,
+             "events": U + 4 + 6 * U}        # úkazy: aspoň 6 řádků, víc jen když zbyde místo
+LINE_HEADER_H = 24 + MARGIN                  # jednořádková hlavička (datum 12×24, zbytek 8×16)
 
 
 def column_groups(n: int) -> tuple[tuple[str, ...], ...]:
     """Které sekce patří do kterého sloupce (sdílí layout i render)."""
     if n >= 3:
-        return (("sun", "moon"), ("iss",), ("events",))
+        return (("sun", "iss"), ("moon",), ("events",))
     if n == 2:
         return (("sun", "moon"), ("iss", "events"))
     return (ALL_SECTIONS,)
 
 
 def _needed_body_h(n: int, sections: tuple[str, ...]) -> int:
-    """Výška těla infopanelu, kterou sekce (bez úkazů) skutečně potřebují."""
+    """Výška těla infopanelu, kterou zobrazené sekce potřebují (nejvyšší sloupec)."""
     best = 0
     for group in column_groups(n):
-        best = max(best, sum(SECTION_H[s] + SECTION_GAP for s in group if s in sections and s in SECTION_H))
+        best = max(best, sum(SECTION_H[s] + SECTION_GAP for s in group if s in sections))
     return best
 
 
@@ -58,10 +60,11 @@ class Zones:
     header: Rect | None
     columns: tuple[Rect, ...]
     header_big: bool
+    header_line: bool = False      # datum, čas a poloha na jednom řádku (horizon na šířku)
 
 
-def _split(info: Rect, header_big: bool) -> tuple[Rect, tuple[Rect, ...]]:
-    hh = BIG_HEADER_H if header_big else 16 + U + MARGIN
+def _split(info: Rect, header_big: bool, header_line: bool = False) -> tuple[Rect, tuple[Rect, ...]]:
+    hh = LINE_HEADER_H if header_line else (BIG_HEADER_H if header_big else SMALL_HEADER_H)
     header = Rect(info.x, info.y, info.w, hh)
     body = Rect(info.x, header.bottom, info.w, max(0, info.bottom - header.bottom))
     wide = body.w >= 1.5 * body.h
@@ -76,14 +79,14 @@ def _split(info: Rect, header_big: bool) -> tuple[Rect, tuple[Rect, ...]]:
     return header, cols
 
 
-def _zones(m: Rect, info: Rect | None) -> Zones:
+def _zones(m: Rect, info: Rect | None, line: bool = False) -> Zones:
     if info is None:
         return Zones(m, None, None, (), False)
     # Velká hlavička jen tehdy, když pod ní zbude místo na Slunce + Měsíc v jednom
-    # sloupci (2× titulek + 3 řádky, mezera): jinak by na 800×480 horizon vypadl řádek Fáze.
-    big = info.h >= 128 and info.w >= 224 and info.h - BIG_HEADER_H >= 9 * U
-    header, cols = _split(info, big)
-    return Zones(m, info, header, cols, big)
+    # sloupci (2× titulek + 3 řádky, mezera): jinak by vypadl řádek Fáze.
+    big = not line and info.h >= 128 and info.w >= 224 and info.h - BIG_HEADER_H >= 9 * U
+    header, cols = _split(info, big, line)
+    return Zones(m, info, header, cols, big, line)
 
 
 def compute(w: int, h: int, view: str, sections: tuple[str, ...] = ALL_SECTIONS,
@@ -106,10 +109,11 @@ def compute(w: int, h: int, view: str, sections: tuple[str, ...] = ALL_SECTIONS,
         else:
             m = Rect(0, 0, w, h)
             info = None
-        if info is not None and "events" not in sections:
-            # Bez úkazů není co roztahovat: infopanel dostane jen to, co sekce
-            # potřebují, zbytek připadne výseku obzoru. Nikdy ne víc než výchozí výška.
-            z = _zones(m, info)
+        line = w >= h          # na šířku: datum, čas a poloha na jednom řádku
+        if info is not None:
+            # Infopanel dostane jen výšku, kterou zobrazené sekce potřebují (úkazy
+            # aspoň 6 řádků); zbytek připadne výseku obzoru. Nikdy ne víc než výchozí.
+            z = _zones(m, info, line)
             for _ in range(2):   # nižší tělo může změnit počet sloupců → druhý průchod
                 need = z.header.h + _needed_body_h(len(z.columns), sections)
                 if need >= info.h:
@@ -117,6 +121,6 @@ def compute(w: int, h: int, view: str, sections: tuple[str, ...] = ALL_SECTIONS,
                 mh = min(h - need, max_map)
                 info = Rect(0, mh, w, h - mh)
                 m = Rect(0, 0, w, mh)
-                z = _zones(m, info)
+                z = _zones(m, info, line)
             return z
     return _zones(m, info)

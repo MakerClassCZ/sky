@@ -12,6 +12,7 @@ DEFAULT_EVENTS_URL = (
     "%40group.calendar.google.com/public/basic.ics"
 )
 DEFAULT_TLE_URL = "https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=tle"
+DEFAULT_ROCKETS_URL = "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=40&format=json&mode=list"
 
 
 @dataclass(frozen=True)
@@ -22,8 +23,10 @@ class Config:
     token: str | None
     events_url: str
     tle_url: str
+    rockets_url: str
     render_cache_s: int
     event_types: tuple[str, ...]
+    rate_limit: int            # požadavků na /sky.* za minutu a IP; 0 = bez limitu
 
 
 def _float_or_none(v: str | None) -> float | None:
@@ -40,6 +43,8 @@ def load(env: Mapping[str, str] | None = None) -> Config:
         token=e.get("SKY_TOKEN") or None,
         events_url=e.get("SKY_EVENTS_URL", DEFAULT_EVENTS_URL),
         tle_url=e.get("SKY_TLE_URL", DEFAULT_TLE_URL),
+        rockets_url=e.get("SKY_ROCKETS_URL", DEFAULT_ROCKETS_URL),
         render_cache_s=int(e.get("SKY_RENDER_CACHE_S", "300")),
         event_types=types,
+        rate_limit=int(e.get("SKY_RATE_LIMIT", "60")),
     )

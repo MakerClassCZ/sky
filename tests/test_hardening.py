@@ -138,3 +138,16 @@ def test_render_cache_bounded_by_bytes(monkeypatch):
     service._store(parse({"lat": "3", "lon": "4"}, cfg, "png"), t, small, cfg)
     assert key not in service._cache and len(service._cache) == 1
     service._cache.clear()
+
+
+def test_rate_limit_per_ip():
+    from sky import app as app_mod
+    app_mod._limiter.clear()
+    c = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache", "SKY_RATE_LIMIT": "3"})))
+    codes = [c.get("/sky.png?lat=99&lon=1").status_code for _ in range(4)]
+    assert codes == [400, 400, 400, 429]
+    assert c.get("/health").status_code == 200        # health a stránka se nelimitují
+    assert c.get("/").status_code == 200
+    app_mod._limiter.clear()
+    c0 = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache", "SKY_RATE_LIMIT": "0"})))
+    assert all(c0.get("/sky.png?lat=99&lon=1").status_code == 400 for _ in range(5))

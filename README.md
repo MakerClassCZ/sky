@@ -48,6 +48,8 @@ GET /health
 | `rot` | 0 \| 90 \| 180 \| 270 | otočení hotového obrázku po směru hodin | `0` |
 | `t` | ISO 8601 | čas vykreslení (náhledy, testy); bez zóny = UTC; roky 1900–2050 (rozsah efemeridy) | teď |
 | `iss`, `events` | 0 \| 1 | vypnutí sekce ISS / úkazů | `1` |
+| `rockets` | 0 \| 1 | starty raket (Launch Library 2) v seznamu úkazů, s časem startu | `0` |
+| `lines` | `solid` \| `dashed` \| `dotted` | spojnice souhvězdí plné, čárkované, tečkované (menší kontrast) | `solid` |
 | `lang` | `cs` \| `en` | jazyk popisků a textů | `cs` |
 | `token` | | povinný, když je nastaven `SKY_TOKEN` | – |
 
@@ -82,16 +84,21 @@ python -m sky warmup
 | `SKY_TOKEN` | když je nastaven, vyžaduje se `?token=` | – |
 | `SKY_EVENTS_URL` | ICS kalendář úkazů | sdílený kalendář Jana Tichého |
 | `SKY_TLE_URL` | zdroj TLE pro ISS | Celestrak, NORAD 25544 |
+| `SKY_ROCKETS_URL` | JSON nadcházejících startů (Launch Library 2) | `ll.thespacedevs.com/2.2.0/launch/upcoming/` |
 | `SKY_RENDER_CACHE_S` | TTL cache hotových obrázků v sekundách | `300` |
 | `SKY_EVENT_TYPES` | typy úkazů k zobrazení: `eye,scope,warn,moon,none,info` | `eye,scope,warn,moon` |
+| `SKY_RATE_LIMIT` | nejvýš tolik požadavků na `/sky.*` za minutu z jedné IP (429 při překročení); `0` vypne | `60` |
 
 ## Nasazení v Coolify
 
 1. Nový zdroj typu **Dockerfile** (repozitář nebo vložený obsah `Dockerfile`).
 2. **Persistent Storage**: volume → `/cache` (efemerida, TLE, ICS přežijí redeploy).
 3. **Port**: `8080`.
-4. **Environment Variables**: `SKY_TOKEN` (`php -r "echo bin2hex(random_bytes(16));"`),
-   volitelně `SKY_LAT`, `SKY_LON`.
+4. **Environment Variables**: pro soukromou instanci `SKY_TOKEN`
+   (`php -r "echo bin2hex(random_bytes(16));"`); pro veřejnou instanci (např.
+   `sky.makerclass.cz`) token nenastavujte, ochranou je limit `SKY_RATE_LIMIT`
+   (výchozí 60 požadavků za minutu na IP, čte se `X-Forwarded-For` z proxy)
+   a paměťová cache hotových obrázků. Volitelně `SKY_LAT`, `SKY_LON`.
 5. Health check: `GET /health` → `{"status": "ok", "ephemeris": "ok"}`.
 
 Lokálně:
@@ -104,11 +111,12 @@ curl "http://localhost:8080/sky.png?lat=49.747&lon=13.378&token=tajne" -o obloha
 
 ## Zapojení do Živého obrazu
 
-V administraci Živého obrazu nastavte zdroj **obrázek z URL** a zadejte adresu
-služby včetně parametrů pro svůj panel, např.
+Otevřete konfigurační stránku služby (např. `https://sky.makerclass.cz/`),
+naklikejte panel a zkopírujte adresu. V administraci Živého obrazu pak nastavte
+zdroj **obrázek z URL** a adresu vložte, např.
 
 ```
-https://sky.vase-domena.cz/sky.png?lat=49.747&lon=13.378&az=200&w=800&h=480&colors=bw&token=…
+https://sky.makerclass.cz/sky.png?lat=49.747&lon=13.378&az=200&w=800&h=480&colors=bw
 ```
 
 Server Živého obrazu musí na službu dosáhnout z internetu. Pro BWR/BWRY panely
@@ -124,7 +132,9 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
 - **Infopanel**: datum a čas, Slunce (východ, západ, kdy začíná noc / svítá),
   Měsíc (východ, západ, fáze), ISS (nejbližší viditelný přelet do 48 h: nad 10°,
   osvětlená, za občanského soumraku), úkazy (dalších 12 z kalendáře, dnešní
-  zvýrazněný). Rozložení se přizpůsobí rozměru; na malé panely jde jen mapa.
+  zvýrazněný; volitelně i starty raket s časem). U `horizon` dostane infopanel
+  jen výšku, kterou zobrazené sekce potřebují (úkazy aspoň 6 řádků), zbytek
+  připadne obloze; na šířku je hlavička jednořádková. Na malé panely jde jen mapa.
 
 ## Zdroje dat a licence
 
@@ -132,6 +142,9 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
   (BSD-3, `sky/data/LICENSE-d3-celestial`); hvězdy z katalogu XHIP, čáry podle IAU.
 - Efemerida JPL DE421 a výpočty: [Skyfield](https://rhodesmill.org/skyfield/) (MIT).
 - Dráha ISS: TLE z [Celestrak](https://celestrak.org/).
+- Starty raket: [Launch Library 2](https://thespacedevs.com/llapi) (The Space Devs), bez klíče,
+  anonymně 15 dotazů za hodinu; služba se ptá nejvýš jednou za 6 hodin. Proběhlé starty a
+  starty bez potvrzeného data se nezobrazují.
 - Kalendář úkazů: sdílený český kalendář nebeských úkazů Jana Tichého,
   [jantichy.cz/ukazy](https://www.jantichy.cz/ukazy). Licence není uvedena;
   určeno pro soukromé displeje, při zveřejnění uveďte zdroj.

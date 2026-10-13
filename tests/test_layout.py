@@ -19,18 +19,22 @@ def test_sky_portrait_480x800():
 
 
 def test_horizon_landscape_800x480():
+    from sky.layout import LINE_HEADER_H
     z = compute(800, 480, "horizon")
-    assert z.map == Rect(0, 0, 800, 288)
-    assert z.info == Rect(0, 288, 800, 192)
+    # jednořádková hlavička a tři sloupce: Slunce+ISS | Měsíc | úkazy (min. 6 řádků)
+    assert z.header_line and not z.header_big and z.header.h == LINE_HEADER_H
     assert len(z.columns) == 3
-    assert not z.header_big                    # velká hlavička by vytlačila řádek Fáze
-    assert z.columns[0].h >= 9 * 16            # Slunce (4 řádky) + mezera + Měsíc (4 řádky)
+    assert z.columns[0].h >= 2 * 20 + 5 * 16 + 2 * 8      # Slunce + ISS
+    assert z.columns[2].h >= 20 + 6 * 16                  # úkazy: titulek + 6 řádků
+    assert z.map.h > 288 and z.map.h + z.info.h == 480
 
 
 def test_horizon_portrait_480x800():
+    from sky.layout import HORIZON_BAR
     z = compute(480, 800, "horizon")
-    assert z.map == Rect(0, 0, 480, 288)
-    assert z.info.y == 288 and len(z.columns) == 1
+    # obsahové rozložení: mapa dostane maximum, tedy strop 90° (4 px/° při 120° na 480 px)
+    assert z.map == Rect(0, 0, 480, 480 * 90 // 120 + HORIZON_BAR)
+    assert z.info.y == z.map.h and len(z.columns) == 1
 
 
 def test_tiny_panel_has_no_info():
@@ -49,14 +53,14 @@ def test_horizon_tiny_no_info():
 
 
 def test_horizon_portrait_grows_map_without_events():
-    full = compute(480, 800, "horizon")
-    z = compute(480, 800, "horizon", sections=("sun", "moon", "iss"))
+    full = compute(480, 800, "horizon", fov=90)     # fov 90: strop 90° je až na 504 px
+    z = compute(480, 800, "horizon", sections=("sun", "moon", "iss"), fov=90)
     assert z.map.h > full.map.h
     assert z.info is not None and z.info.h < full.info.h
     assert z.map.h + z.info.h == 800
     # první sloupec (Slunce + Měsíc) má místo na 2 tituly, 6 řádků a mezery
     assert z.columns[0].h >= 2 * 20 + 6 * 16 + 2 * 8
-    z2 = compute(480, 800, "horizon", sections=("sun", "moon"))
+    z2 = compute(480, 800, "horizon", sections=("sun", "moon"), fov=90)
     assert z2.map.h >= z.map.h            # obě mohou narazit na strop 90°
 
 
@@ -66,15 +70,16 @@ def test_horizon_landscape_never_shrinks_map_without_events():
     assert z.map.h >= full.map.h
 
 
-def test_horizon_with_events_keeps_layout():
-    assert compute(480, 800, "horizon", sections=("sun", "moon", "events")) == compute(480, 800, "horizon")
+def test_horizon_portrait_header_stays_big():
+    z = compute(480, 800, "horizon")
+    assert z.header_big and not z.header_line
 
 
 def test_column_groups():
     from sky.layout import column_groups
     assert column_groups(1) == (("sun", "moon", "iss", "events"),)
     assert column_groups(2) == (("sun", "moon"), ("iss", "events"))
-    assert column_groups(3) == (("sun", "moon"), ("iss",), ("events",))
+    assert column_groups(3) == (("sun", "iss"), ("moon",), ("events",))
 
 
 def test_horizon_map_capped_at_90_degrees():

@@ -30,6 +30,7 @@ class Event:
     date: date
     title: str
     kind: str
+    time: str = ""        # "HH:MM" místního času, jen u událostí s časem (starty raket)
 
 
 def classify(summary: str) -> tuple[str, str]:
@@ -73,3 +74,8 @@ def upcoming(cfg: Config, today: date, n: int = 12) -> list[Event] | None:
     except Exception as exc:  # noqa: BLE001 – vadný ICS nesmí shodit render
         log.warning("ICS parse failed: %s", exc)
         return None
+
+
+def merge(a: list[Event], b: list[Event], n: int) -> list[Event]:
+    """Sloučí dva seznamy podle data a času, vrátí prvních n."""
+    return sorted(a + b, key=lambda e: (e.date, e.time, e.title))[:n]

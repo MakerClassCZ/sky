@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import logging
 import secrets
+import threading
+import time
 
 from pathlib import Path
 
@@ -14,6 +16,26 @@ from sky.params import ParamError, parse
 
 log = logging.getLogger(__name__)
 STATIC_DIR = Path(__file__).parent / "static"
+_limiter: dict[str, list[float]] = {}     # IP → časy požadavků v posledním okně
+_limiter_lock = threading.Lock()
+RATE_WINDOW_S = 60.0
+
+
+def _rate_limited(ip: str, limit: int) -> bool:
+    """Posuvné okno 60 s na IP; při překročení True. Veřejná instance bez tokenu."""
+    if limit <= 0:
+        return False
+    now = time.time()
+    with _limiter_lock:
+        hits = [t for t in _limiter.get(ip, ()) if now - t < RATE_WINDOW_S]
+        if len(hits) >= limit:
+            _limiter[ip] = hits
+            return True
+        hits.append(now)
+        _limiter[ip] = hits
+        if len(_limiter) > 10_000:
+            _limiter.clear()
+    return False
 
 
 def create_app(cfg: config.Config | None = None) -> FastAPI:
@@ -34,6 +56,10 @@ def create_app(cfg: config.Config | None = None) -> FastAPI:
     @app.get("/sky.{fmt}")
     def sky(fmt: str, request: Request):
         q = dict(request.query_params)
+        ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip() or (request.client.host if request.client else "?")
+        if _rate_limited(ip, cfg.rate_limit):
+            return PlainTextResponse("příliš mnoho požadavků, zkuste to za minutu", status_code=429,
+                                     headers={"Retry-After": "60"})
         if cfg.token and not secrets.compare_digest(q.get("token", "").encode(), cfg.token.encode()):
             return PlainTextResponse("forbidden", status_code=403)
         try:

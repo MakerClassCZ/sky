@@ -160,6 +160,9 @@
         <label><input type="radio" name="colors" value="bwr"><span>+ červená</span></label>
         <label><input type="radio" name="colors" value="bwry"><span>+ červená a žlutá</span></label>
       </div>
+      <label class="f">Spojnice souhvězdí
+        <select name="lines"><option value="solid">plné</option><option value="dashed">čárkované</option><option value="dotted">tečkované</option></select>
+      </label>
       <div class="grid2">
         <label class="f">Formát
           <select name="fmt"><option value="png">PNG</option><option value="bmp">BMP</option></select>
@@ -181,6 +184,7 @@
       <legend>Obsah</legend>
       <label class="check"><input type="checkbox" name="iss" checked> Přelety ISS</label>
       <label class="check"><input type="checkbox" name="events" checked> Kalendář úkazů</label>
+      <label class="check"><input type="checkbox" name="rockets"> Starty raket (Launch Library 2)</label>
       <div class="seg">
         <label><input type="radio" name="lang" value="cs" checked><span>Česky</span></label>
         <label><input type="radio" name="lang" value="en"><span>English</span></label>
@@ -233,6 +237,8 @@
     if (val('h') !== '480') p.set('h', val('h'));
     if (val('colors') !== 'bw') p.set('colors', val('colors'));
     if (val('rot') !== '0') p.set('rot', val('rot'));
+    if (val('lines') !== 'solid') p.set('lines', val('lines'));
+    if (q('rockets').checked) p.set('rockets', '1');
     if (!q('iss').checked) p.set('iss', '0');
     if (!q('events').checked) p.set('events', '0');
     if (val('lang') !== 'cs') p.set('lang', val('lang'));

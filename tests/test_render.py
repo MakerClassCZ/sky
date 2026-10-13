@@ -146,3 +146,40 @@ def test_line_styles_reduce_ink():
     solid, dashed, dotted = ink("solid"), ink("dashed"), ink("dotted")
     assert solid > dashed > dotted > 0
     assert dashed < 0.75 * solid and dotted < 0.5 * solid
+
+
+def test_event_time_is_rendered():
+    p = _params(iss=0)
+    with_time = render(p, fake_model(), ISS, [Event(T.date(), "Zhuque-2E", "rocket", "13:40")])
+    without = render(p, fake_model(), ISS, [Event(T.date(), "Zhuque-2E", "rocket")])
+    assert with_time.tobytes() != without.tobytes()
+
+
+def test_sun_glyph_size():
+    # kotouč Slunce má průměr 15 px (poloměr 7) + paprsky; měřeno na prázdném modelu ve dne
+    p = _params(events=0, iss=0)
+    m = fake_model("day")
+    model = SkyModel(m.t, m.tz, m.lat, m.lon, "day", np.zeros((0, 3)), [], [], [], SunInfo(60.0, 180.0, T, T, T, T),
+                     MoonInfo(-10.0, 0.0, 0.0, 0.0, None, None))
+    img = render(p, model, IssInfo(False, None, None, None), None)
+    from sky.projection import SkyProjection
+    x, y = SkyProjection(480, 180).project(60.0, 180.0)
+    row = [img.getpixel((int(x) + dx, int(y))) for dx in range(-12, 13)]
+    disc = sum(1 for v in row[12 - 8:12 + 9] if v != 0)     # vyplněné pixely kolem středu
+    assert disc >= 15
+
+
+def test_saturn_has_ring():
+    # Saturn se kreslí s elipsou prstence: širší než ostatní planety na stejném místě
+    p = _params(events=0, iss=0)
+    m = fake_model()
+
+    def width_of(key):
+        model = SkyModel(m.t, m.tz, m.lat, m.lon, m.mode, np.zeros((0, 3)), [], [], [Body(key, "X", 60.0, 180.0)],
+                         m.sun, MoonInfo(-10.0, 0.0, 0.0, 0.0, None, None))
+        img = render(p, model, IssInfo(False, None, None, None), None)
+        from sky.projection import SkyProjection
+        x, y = SkyProjection(480, 180).project(60.0, 180.0)
+        return sum(1 for dx in range(-14, 15) if img.getpixel((int(x) + dx, int(y))) != 1 and dx < 5)  # vlevo od popisku
+
+    assert width_of("saturn barycenter") > width_of("mars")

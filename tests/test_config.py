@@ -23,3 +23,13 @@ def test_env_override():
     assert c.token == "x"
     assert c.render_cache_s == 10
     assert c.event_types == ("eye", "moon")
+
+
+def test_rockets_url_default_and_override():
+    assert "thespacedevs.com" in config.load({}).rockets_url
+    assert config.load({"SKY_ROCKETS_URL": "http://x"}).rockets_url == "http://x"
+
+
+def test_rate_limit_default():
+    assert config.load({}).rate_limit == 60
+    assert config.load({"SKY_RATE_LIMIT": "0"}).rate_limit == 0

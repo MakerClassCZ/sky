@@ -59,3 +59,8 @@ def test_parse_time_naive_is_utc():
 def test_lines_style():
     assert parse({}, CFG_LOC, "png").lines == "solid"
     assert parse({"lines": "dotted"}, CFG_LOC, "png").lines == "dotted"
+
+
+def test_rockets_flag():
+    assert parse({}, CFG_LOC, "png").rockets is False
+    assert parse({"rockets": "1"}, CFG_LOC, "png").rockets is True
