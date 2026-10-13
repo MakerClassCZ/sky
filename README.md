@@ -93,7 +93,7 @@ python -m sky warmup
 | `SKY_RENDER_CACHE_S` | TTL cache hotových obrázků v sekundách | `300` |
 | `SKY_EVENT_TYPES` | typy úkazů k zobrazení: `eye,scope,warn,moon,none,info` | `eye,scope,warn,moon` |
 | `SKY_RATE_LIMIT` | nejvýš tolik požadavků na `/sky.*` za minutu z jedné IP (429 při překročení); `0` vypne | `60` |
-| `SKY_TRUST_PROXY` | `1` = IP klienta z poslední položky `X-Forwarded-For` (nastavte jen za reverzní proxy, např. v Coolify) | `0` |
+| `SKY_TRUST_PROXY` | `1` = IP klienta z poslední položky `X-Forwarded-For` (za reverzní proxy, např. Coolify); `cloudflare` = navíc `CF-Connecting-IP`, ale jen když požadavek přišel z rozsahů Cloudflare | `0` |
 
 ## Nasazení v Coolify
 
@@ -105,7 +105,13 @@ python -m sky warmup
    `sky.makerclass.cz`) token nenastavujte, ochranou je limit `SKY_RATE_LIMIT`
    (výchozí 60 požadavků za minutu na IP) a paměťová cache hotových obrázků.
    V Coolify nastavte `SKY_TRUST_PROXY=1`, aby se IP brala z `X-Forwarded-For`
-   doplněné proxy; bez proxy hlavičku nechte ignorovat, klient si ji může podvrhnout. Volitelně `SKY_LAT`, `SKY_LON`.
+   doplněné proxy; bez proxy hlavičku nechte ignorovat, klient si ji může podvrhnout.
+   Za Cloudflare použijte `SKY_TRUST_PROXY=cloudflare`: skutečný klient se bere
+   z `CF-Connecting-IP`, ale jen když požadavek přišel z IP rozsahů Cloudflare
+   (jinak by všichni návštěvníci sdíleli pár adres edge serverů a limit by padal
+   na všechny). Ideálně navíc omezte přístup k originu jen na Cloudflare a
+   přidejte limit i v Cloudflare (WAF rate limiting), ten chrání i před špičkami,
+   které k aplikaci vůbec nedojdou. Volitelně `SKY_LAT`, `SKY_LON`.
 5. Health check: `GET /health` → `{"status": "ok", "ephemeris": "ok"}`.
 
 Lokálně:

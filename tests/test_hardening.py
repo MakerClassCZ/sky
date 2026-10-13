@@ -180,3 +180,25 @@ def test_limiter_prune_keeps_active_counters():
     assert app_mod._rate_limited("active", 3) is True          # čítač aktivní IP přežil úklid
     assert len(app_mod._limiter) <= app_mod.LIMITER_MAX_IPS + 1
     app_mod._limiter.clear()
+
+
+def test_cloudflare_mode_uses_cf_connecting_ip_only_from_cloudflare_ranges():
+    from sky import app as app_mod
+    app_mod._limiter.clear()
+    c = TestClient(create_app(config.load({"SKY_CACHE_DIR": "cache", "SKY_RATE_LIMIT": "2", "SKY_TRUST_PROXY": "cloudflare"})))
+    # peer (poslední XFF) je z rozsahu Cloudflare → platí CF-Connecting-IP: tři různí klienti, žádný 429
+    codes = [c.get("/sky.png?lat=99&lon=1", headers={"X-Forwarded-For": f"203.0.113.{i}, 104.16.0.{i}",
+                                                     "CF-Connecting-IP": f"203.0.113.{i}"}).status_code for i in range(3)]
+    assert codes == [400, 400, 400]
+    app_mod._limiter.clear()
+    # peer není Cloudflare → CF-Connecting-IP se ignoruje, počítá se peer; podvržené hodnoty limit neobejdou
+    codes = [c.get("/sky.png?lat=99&lon=1", headers={"X-Forwarded-For": f"198.51.100.{i}, 192.0.2.9",
+                                                     "CF-Connecting-IP": f"198.51.100.{i}"}).status_code for i in range(3)]
+    assert codes == [400, 400, 429]
+    app_mod._limiter.clear()
+
+
+def test_cloudflare_ranges_known():
+    from sky.app import is_cloudflare_ip
+    assert is_cloudflare_ip("104.16.0.1") and is_cloudflare_ip("172.64.1.1") and is_cloudflare_ip("2606:4700::1")
+    assert not is_cloudflare_ip("8.8.8.8") and not is_cloudflare_ip("garbage")
