@@ -73,8 +73,9 @@ GET /health
 | `token` | string | povinný, pokud je nastaven env `SKY_TOKEN` | – |
 
 - Přípona volí formát. `.png`: indexované PNG s paletou přesně v barvách palety
-  (§7). `.bmp`: `bw` → 1 bit/px, `bwr`/`bwry` → 4 bit/px indexované
-  (Pillow režim `P`), bez komprese.
+  (§7). `.bmp`: `bw` → 1 bit/px, `bwr`/`bwry` → 8 bit/px indexované
+  (Pillow režim `P` zapisuje 8 bpp; paleta v hlavičce má jen 3–4 barvy),
+  bez komprese.
 - `w`×`h` určuje orientaci; `rot` se použije až na hotový obrázek (pro
   firmwary s pevnou orientací framebufferu).
 - Nevalidní parametr → HTTP 400 s textovým popisem. Chybějící/špatný token →
@@ -258,8 +259,7 @@ Role (`bg`, `fg`, `star`, `line`, `label`, `planet`, `sun`, `moon_lit`,
 PNG: `Image.save(format="PNG", optimize=True)`, bity na pixel podle počtu
 barev (1 bit pro `bw`, 2 bity pro ostatní – Pillow volí automaticky podle
 délky palety). BMP: pro `bw` převést na režim `1` (1 bpp), pro ostatní
-ponechat `P` (Pillow zapíše 4/8 bpp podle palety; firmware si načte paletu
-z hlavičky). Rotace `rot` před enkódováním (`Image.rotate(-rot, expand=True)`).
+ponechat `P` (Pillow zapíše 8 bpp; firmware si načte paletu z hlavičky). Rotace `rot` před enkódováním (`Image.rotate(-rot, expand=True)`).
 
 ---
 
