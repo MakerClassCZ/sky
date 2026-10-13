@@ -1,0 +1,105 @@
+"""Parametry požadavku (spec §3.1), společné pro HTTP i CLI."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Mapping
+
+from sky.config import Config
+
+VIEWS = ("sky", "horizon")
+COLORS = ("bw", "bwr", "bwry")
+ROTS = (0, 90, 180, 270)
+LANGS = ("cs", "en")
+FORMATS = ("png", "bmp")
+
+
+class ParamError(ValueError):
+    """Nevalidní parametr; text je určen uživateli (HTTP 400)."""
+
+
+@dataclass(frozen=True)
+class Params:
+    lat: float
+    lon: float
+    view: str = "sky"
+    az: float = 180.0
+    fov: float = 120.0
+    w: int = 800
+    h: int = 480
+    colors: str = "bw"
+    rot: int = 0
+    t: datetime | None = None
+    iss: bool = True
+    events: bool = True
+    lang: str = "cs"
+    fmt: str = "png"
+
+
+def _num(q, key, default, lo, hi, cast):
+    raw = q.get(key)
+    if raw is None or raw == "":
+        if default is None:
+            raise ParamError(f"chybí parametr {key}")
+        return default
+    try:
+        v = cast(raw)
+    except ValueError:
+        raise ParamError(f"{key}: není číslo") from None
+    if not (lo <= v <= hi):
+        raise ParamError(f"{key}: mimo rozsah {lo}..{hi}")
+    return v
+
+
+def _choice(q, key, default, allowed, cast=str):
+    raw = q.get(key)
+    if raw is None or raw == "":
+        return default
+    try:
+        v = cast(raw)
+    except ValueError:
+        v = raw
+    if v not in allowed:
+        raise ParamError(f"{key}: povolené hodnoty {', '.join(map(str, allowed))}")
+    return v
+
+
+def _flag(q, key, default):
+    raw = q.get(key)
+    if raw is None or raw == "":
+        return default
+    if raw not in ("0", "1"):
+        raise ParamError(f"{key}: povolené hodnoty 0, 1")
+    return raw == "1"
+
+
+def parse_time(raw: str) -> datetime:
+    try:
+        dt = datetime.fromisoformat(raw)
+    except ValueError:
+        raise ParamError("t: očekáván čas ISO 8601, např. 2026-10-13T22:00+02:00") from None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def parse(q: Mapping[str, str], cfg: Config, fmt: str = "png") -> Params:
+    if fmt not in FORMATS:
+        raise ParamError("formát: povolené png, bmp")
+    t_raw = q.get("t")
+    return Params(
+        lat=_num(q, "lat", cfg.lat, -90.0, 90.0, float),
+        lon=_num(q, "lon", cfg.lon, -180.0, 180.0, float),
+        view=_choice(q, "view", "sky", VIEWS),
+        az=_num(q, "az", 180.0, 0.0, 360.0, float),
+        fov=_num(q, "fov", 120.0, 30.0, 180.0, float),
+        w=_num(q, "w", 800, 64, 2000, int),
+        h=_num(q, "h", 480, 64, 2000, int),
+        colors=_choice(q, "colors", "bw", COLORS),
+        rot=_choice(q, "rot", 0, ROTS, int),
+        t=parse_time(t_raw) if t_raw else None,
+        iss=_flag(q, "iss", True),
+        events=_flag(q, "events", True),
+        lang=_choice(q, "lang", "cs", LANGS),
+        fmt=fmt,
+    )
