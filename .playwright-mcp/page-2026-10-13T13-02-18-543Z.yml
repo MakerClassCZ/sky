@@ -1,0 +1,132 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - heading "Sky – obloha pro váš e-paper" [level=1] [ref=e3]
+    - paragraph [ref=e4]: Nastavte panel, zkopírujte adresu dole. Náhled je přesně to, co displej dostane.
+  - main [ref=e5]:
+    - generic [ref=e6]:
+      - img "Náhled panelu" [ref=e139]
+      - generic [ref=e10]:
+        - generic [ref=e11]: 800×480 px · den · 9.6 kB · 0.6 s
+        - group "Měřítko náhledu" [ref=e12]:
+          - button "Přizpůsobit" [pressed] [ref=e13] [cursor=pointer]
+          - button "1:1" [ref=e14] [cursor=pointer]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - heading "Kde jste" [level=2] [ref=e17]
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - text: Zeměpisná šířka
+            - spinbutton "Zeměpisná šířka" [ref=e20]: "49.747"
+          - generic [ref=e21]:
+            - text: Zeměpisná délka
+            - spinbutton "Zeměpisná délka" [ref=e22]: "13.378"
+        - button "Použít polohu tohoto zařízení" [ref=e23] [cursor=pointer]
+      - generic [ref=e24]:
+        - heading "Jak se díváte" [level=2] [ref=e25]
+        - generic [ref=e26]:
+          - generic [ref=e27] [cursor=pointer]:
+            - radio "Celá obloha" [checked]
+            - generic [ref=e36]: Celá obloha
+          - generic [ref=e37] [cursor=pointer]:
+            - radio "Z okna"
+            - generic [ref=e45]: Z okna
+        - generic [ref=e46]:
+          - slider "Směr" [ref=e47] [cursor=pointer]:
+            - generic [ref=e70]: S
+            - generic [ref=e71]: V
+            - generic [ref=e72]: J
+            - generic [ref=e73]: Z
+          - generic [ref=e75]:
+            - generic [ref=e76]:
+              - generic [ref=e77]: 180°
+              - text: jih
+            - paragraph [ref=e78]: Tento směr je na mapě dole, tedy před vámi. Táhněte na kompasu nebo použijte šipky.
+      - generic [ref=e79]:
+        - heading "Jaký panel" [level=2] [ref=e80]
+        - generic [ref=e81]:
+          - generic [ref=e82] [cursor=pointer]:
+            - radio "7,5\" na šířku 800×480" [checked]
+            - generic [ref=e84]: 7,5" na šířku800×480
+          - generic [ref=e85] [cursor=pointer]:
+            - radio "7,5\" na výšku 480×800"
+            - generic [ref=e87]: 7,5" na výšku480×800
+          - generic [ref=e88] [cursor=pointer]:
+            - radio "4,2\" 400×300"
+            - generic [ref=e90]: 4,2"400×300
+          - generic [ref=e91] [cursor=pointer]:
+            - radio "2,9\" 296×128"
+            - generic [ref=e93]: 2,9"296×128
+          - generic [ref=e94] [cursor=pointer]:
+            - radio "13,3\" 1600×1200"
+            - generic [ref=e96]: 13,3"1600×1200
+          - generic [ref=e97] [cursor=pointer]:
+            - radio "Vlastní rozměr"
+            - generic [ref=e99]: Vlastnírozměr
+        - group "Barvy displeje" [ref=e100]:
+          - generic [ref=e101] [cursor=pointer]:
+            - radio "BW" [checked]
+            - generic [ref=e102]: BW
+          - generic [ref=e103] [cursor=pointer]:
+            - radio "BWR"
+            - generic [ref=e104]: BWR
+          - generic [ref=e105] [cursor=pointer]:
+            - radio "BWRY"
+            - generic [ref=e106]: BWRY
+          - generic [ref=e107] [cursor=pointer]:
+            - radio "Spectra6"
+            - generic [ref=e108]: Spectra6
+      - generic [ref=e109]:
+        - heading "Co ukázat" [level=2] [ref=e110]
+        - generic [ref=e111]:
+          - checkbox "ISS a její přelety" [checked] [ref=e112]
+          - text: ISS a její přelety
+        - generic [ref=e113]:
+          - checkbox "Kalendář úkazů jantichy.cz/ukazy" [checked] [ref=e114]
+          - text: Kalendář úkazů
+          - link "jantichy.cz/ukazy" [ref=e115] [cursor=pointer]:
+            - /url: https://www.jantichy.cz/ukazy
+        - generic [ref=e116]:
+          - checkbox "Starty raket Launch Library 2" [ref=e117]
+          - text: Starty raket
+          - link "Launch Library 2" [ref=e118] [cursor=pointer]:
+            - /url: https://thespacedevs.com/llapi
+        - generic [ref=e119]:
+          - checkbox "Oblačnost na noc Open-Meteo" [checked] [ref=e120]
+          - text: Oblačnost na noc
+          - link "Open-Meteo" [ref=e121] [cursor=pointer]:
+            - /url: https://open-meteo.com/
+      - generic [ref=e122]:
+        - heading "Kdy" [level=2] [ref=e123]
+        - generic [ref=e124]:
+          - generic [ref=e125] [cursor=pointer]:
+            - radio "Teď" [checked]
+            - generic [ref=e126]: Teď
+          - generic [ref=e127] [cursor=pointer]:
+            - radio "Dnes v…"
+            - generic [ref=e128]: Dnes v…
+          - generic [ref=e129] [cursor=pointer]:
+            - radio "Jiný čas pro náhled"
+            - generic [ref=e130]: Jiný čas pro náhled
+        - paragraph [ref=e131]: Displej dostává aktuální oblohu; přes den světlý režim.
+      - group [ref=e132]:
+        - generic "Další nastavení" [ref=e133] [cursor=pointer]
+        - option "PNG" [selected]
+        - option "BMP"
+        - option "žádné" [selected]
+        - option "90°"
+        - option "180°"
+        - option "270°"
+        - option "plné" [selected]
+        - option "čárkované"
+        - option "tečkované"
+        - option "podle Slunce" [selected]
+        - option "vždy noční"
+        - option "vždy denní"
+        - option "česky" [selected]
+        - option "English"
+  - generic [ref=e134]:
+    - generic [ref=e135]: Adresa pro Živý obraz
+    - textbox "Adresa obrázku pro Živý obraz" [ref=e136]: http://127.0.0.1:8765/sky.png?lat=49.747&lon=13.378
+    - link "Otevřít" [ref=e137] [cursor=pointer]:
+      - /url: http://127.0.0.1:8765/sky.png?lat=49.747&lon=13.378
+    - button "Kopírovat" [ref=e138] [cursor=pointer]
