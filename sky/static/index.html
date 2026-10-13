@@ -35,22 +35,24 @@
     main { grid-template-columns: 1fr; }
     .stage { position: static; }
     .device.fit { display: inline-block; }
-    .device.fit .screen img { width: auto; max-width: 100%; max-height: 52vh; }   /* na výšku nezabere celou obrazovku */
   }
 
   /* ---- náhled: rámeček displeje ---- */
   .stage { position: sticky; top: 16px; align-self: start; }
   .device { background: var(--bezel); border-radius: 10px; padding: 14px; box-shadow: 0 18px 50px rgba(0,0,0,.5); display: inline-block; max-width: 100%; }
   .device.fit { display: block; }
+  .device.fit .screen { display: flex; justify-content: center; }
   .screen { background: var(--paper); overflow: auto; max-height: 78vh; }
+  @media (max-width: 1000px) { .screen { max-height: 52vh; } }
   .screen img { display: block; image-rendering: pixelated; image-rendering: crisp-edges; cursor: zoom-in; }
-  .device.fit .screen img { width: 100%; height: auto; }
+  .device.fit .screen img { height: auto; }      /* šířku nastavuje skript: celočíselný násobek, aby pixely zůstaly ostré */
   .screen .empty { padding: 60px 20px; color: #666; text-align: center; font-size: 14px; }
   .stageinfo { display: flex; align-items: center; gap: 12px; margin: 10px 2px 0; color: var(--ink-dim); flex-wrap: wrap; }
   .stageinfo .err { color: #ff9a8f; }
   .toggle { margin-left: auto; display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
   .toggle button { border: 0; border-radius: 0; min-height: 30px; padding: 4px 10px; color: var(--ink-dim); background: var(--field); cursor: pointer; }
   .toggle button[aria-pressed="true"] { background: var(--ink); color: var(--night-deep); }
+  .stageinfo .scale { color: var(--ink-dim); }
 
   /* ---- formulář ---- */
   form { display: grid; gap: 26px; align-content: start; }
@@ -362,6 +364,7 @@
       if (old.startsWith('blob:')) URL.revokeObjectURL(old);
       const [w, h] = size();
       status.textContent = `${w}×${h} px · ${mode} · ${(blob.size / 1024).toFixed(1)} kB · ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+      img.onload = () => { applyScale(); const k = img.clientWidth / img.naturalWidth; status.textContent += k >= 1 ? ` · náhled ${Math.round(k)}×` : ` · zmenšeno ${Math.round(k * 100)} %`; };
     } catch (e) {
       if (e.name === 'AbortError') return;
       status.innerHTML = '<span class="err">Službu se nepodařilo zavolat: ' + e.message + '</span>';
@@ -371,12 +374,28 @@
   img.addEventListener('click', () => { if (img.src) window.open(buildUrl(true), '_blank', 'noopener'); });
 
   const device = document.getElementById('device');
+  const screen = document.getElementById('screen');
+  let fitMode = true;
+  function applyScale() {
+    // Bitmapové písmo zůstane ostré jen při celočíselném násobku: 1×, 2×, 3× podle místa.
+    // Když se obrázek nevejde ani 1:1, musí se zmenšit a tam je rozmazání nevyhnutelné (použijte 1:1).
+    if (!img.naturalWidth) return;
+    if (!fitMode) { img.style.width = img.naturalWidth + 'px'; return; }
+    // Řídí se jen šířkou; na výšku se náhled v rámečku roluje, aby 1:1 zůstalo ostré.
+    const availW = screen.clientWidth || device.clientWidth - 28;
+    const k = Math.min(Math.floor(availW / img.naturalWidth), 3);
+    img.style.width = (k >= 1 ? img.naturalWidth * k : availW) + 'px';
+  }
   function setScale(fit) {
+    fitMode = fit;
     device.classList.toggle('fit', fit);
     document.getElementById('fitbtn').setAttribute('aria-pressed', String(fit));
     document.getElementById('onebtn').setAttribute('aria-pressed', String(!fit));
     localStorage.setItem('sky-scale', fit ? 'fit' : '1:1');
+    applyScale();
   }
+  img.addEventListener('load', applyScale);
+  window.addEventListener('resize', applyScale);
   document.getElementById('fitbtn').addEventListener('click', () => setScale(true));
   document.getElementById('onebtn').addEventListener('click', () => setScale(false));
   setScale(localStorage.getItem('sky-scale') !== '1:1');
