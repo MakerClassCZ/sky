@@ -32,11 +32,14 @@ def column_groups(n: int) -> tuple[tuple[str, ...], ...]:
 def _needed_body_h(n: int, sections: tuple[str, ...]) -> int:
     """Výška těla infopanelu, kterou zobrazené sekce potřebují (nejvyšší sloupec)."""
     best = 0
+    extra = U if "weather" in sections else 0        # řádek oblačnosti v sekci Slunce
     for group in column_groups(n):
-        best = max(best, sum(SECTION_H[s] + SECTION_GAP for s in group if s in sections))
+        best = max(best, sum(SECTION_H[s] + SECTION_GAP + (extra if s == "sun" else 0)
+                             for s in group if s in sections and s in SECTION_H))
     if n >= 3 and "iss" in sections:
         # pás ISS pod Sluncem/Měsícem: nejvyšší z obou sloupců + ISS
-        top = max((SECTION_H[s] + SECTION_GAP for s in ("sun", "moon") if s in sections), default=0)
+        top = max((SECTION_H[s] + SECTION_GAP + (extra if s == "sun" else 0)
+                   for s in ("sun", "moon") if s in sections), default=0)
         best = max(best, top + SECTION_H["iss"] + SECTION_GAP)
     return best
 
@@ -68,7 +71,8 @@ class Zones:
     span: Rect | None = None       # pás přes 1. + 2. sloupec pod Sluncem a Měsícem (ISS), jen u 3 sloupců
 
 
-def _split(info: Rect, header_big: bool, header_line: bool = False) -> tuple[Rect, tuple[Rect, ...], Rect | None]:
+def _split(info: Rect, header_big: bool, header_line: bool = False,
+           weather: bool = False) -> tuple[Rect, tuple[Rect, ...], Rect | None]:
     hh = LINE_HEADER_H if header_line else (BIG_HEADER_H if header_big else SMALL_HEADER_H)
     header = Rect(info.x, info.y, info.w, hh)
     body = Rect(info.x, header.bottom, info.w, max(0, info.bottom - header.bottom))
@@ -84,7 +88,7 @@ def _split(info: Rect, header_big: bool, header_line: bool = False) -> tuple[Rec
         q = body.w // 4
         cols = (Rect(body.x, body.y, q, body.h), Rect(body.x + q, body.y, q, body.h),
                 Rect(body.x + 2 * q, body.y, body.w - 2 * q, body.h))
-        top = max(SECTION_H["sun"], SECTION_H["moon"]) + SECTION_GAP
+        top = max(SECTION_H["sun"] + (U if weather else 0), SECTION_H["moon"]) + SECTION_GAP
         span = Rect(body.x, body.y + top, 2 * q, max(0, body.h - top))
         return header, cols, span
     cw = body.w // n
@@ -92,13 +96,13 @@ def _split(info: Rect, header_big: bool, header_line: bool = False) -> tuple[Rec
     return header, cols, None
 
 
-def _zones(m: Rect, info: Rect | None, line: bool = False) -> Zones:
+def _zones(m: Rect, info: Rect | None, line: bool = False, weather: bool = False) -> Zones:
     if info is None:
         return Zones(m, None, None, (), False)
     # Velká hlavička jen tehdy, když pod ní zbude místo na Slunce + Měsíc v jednom
     # sloupci (2× titulek + 3 řádky, mezera): jinak by vypadl řádek Fáze.
     big = not line and info.h >= 128 and info.w >= 224 and info.h - BIG_HEADER_H >= 9 * U
-    header, cols, span = _split(info, big, line)
+    header, cols, span = _split(info, big, line, weather)
     return Zones(m, info, header, cols, big, line, span)
 
 
@@ -123,10 +127,11 @@ def compute(w: int, h: int, view: str, sections: tuple[str, ...] = ALL_SECTIONS,
             m = Rect(0, 0, w, h)
             info = None
         line = w >= h          # na šířku: datum, čas a poloha na jednom řádku
+        wx = "weather" in sections
         if info is not None:
             # Infopanel dostane jen výšku, kterou zobrazené sekce potřebují (úkazy
             # aspoň 6 řádků); zbytek připadne výseku obzoru. Nikdy ne víc než výchozí.
-            z = _zones(m, info, line)
+            z = _zones(m, info, line, wx)
             for _ in range(2):   # nižší tělo může změnit počet sloupců → druhý průchod
                 need = z.header.h + _needed_body_h(len(z.columns), sections)
                 if need >= info.h:
@@ -134,6 +139,6 @@ def compute(w: int, h: int, view: str, sections: tuple[str, ...] = ALL_SECTIONS,
                 mh = min(h - need, max_map)
                 info = Rect(0, mh, w, h - mh)
                 m = Rect(0, 0, w, mh)
-                z = _zones(m, info, line)
+                z = _zones(m, info, line, wx)
             return z
-    return _zones(m, info)
+    return _zones(m, info, False, "weather" in sections)

@@ -203,3 +203,59 @@ def test_iss_lines_join_when_wide():
     assert narrow == ["út 13. 10. 22:00–22:00", "max 61° J"]
     assert iss_lines("cs", tz, IssInfo(True, 1.0, 2.0, None), 50) == ["žádný do 48 h"]
     assert iss_lines("en", tz, IssInfo(False, None, None, None), 50) == ["unavailable"]
+
+
+def test_moon_lit_side_faces_sun():
+    # pohled na sever (az=0): Slunce na JZ je na mapě dole vlevo... osvětlená strana musí mířit ke Slunci
+    from sky.render import moon_lit_direction
+    from sky.projection import SkyProjection
+    proj = SkyProjection(480, 0)
+    mx, my = proj.project(40.0, 120.0)
+    sx, sy = proj.project(-10.0, 240.0)
+    dx, dy = moon_lit_direction((mx, my), (sx, sy))
+    assert abs(dx * dx + dy * dy - 1.0) < 1e-6
+    assert (sx - mx) * dx + (sy - my) * dy > 0
+
+
+def test_horizon_compass_labels_stay_inside():
+    # fov 90 směrem na sever: SV a SZ leží přesně na krajích, popisek se nesmí oříznout
+    p = _params(view="horizon", az=0, fov=90, events=0, iss=0)
+    m = fake_model()
+    model = SkyModel(m.t, m.tz, m.lat, m.lon, m.mode, np.zeros((0, 3)), [], [], [], m.sun,
+                     MoonInfo(-10.0, 0.0, 0.0, 0.0, None, None))
+    img = render(p, model, IssInfo(False, None, None, None), None)
+    from sky.layout import compute
+    z = compute(800, 480, "horizon", ("sun", "moon"), 90)
+    bar_y = z.map.h - 24 + 5
+    # v pravém krajním sloupci 16 px musí být kresba (druhé písmeno "V" ze "SV")
+    right = sum(1 for x in range(784, 800) for y in range(bar_y, bar_y + 16) if img.getpixel((x, y)) == 0)
+    left = sum(1 for x in range(0, 16) for y in range(bar_y, bar_y + 16) if img.getpixel((x, y)) == 0)
+    assert right > 0 and left > 0
+
+
+def test_sun_drawn_in_forced_night():
+    p = _params(mode="night", events=0, iss=0)
+    m = fake_model("day")
+    model = SkyModel(m.t, m.tz, m.lat, m.lon, "night", np.zeros((0, 3)), [], [], [], SunInfo(60.0, 180.0, T, T, T, T),
+                     MoonInfo(-10.0, 0.0, 0.0, 0.0, None, None))
+    img = render(p, model, IssInfo(False, None, None, None), None)
+    from sky.projection import SkyProjection
+    x, y = SkyProjection(480, 180).project(60.0, 180.0)
+    assert img.getpixel((int(x), int(y))) != 1
+
+
+def test_iss_track_drawn():
+    p = _params(events=0, colors="bwr")
+    track = tuple((10.0 + i * 8.0, 120.0 + i * 15.0) for i in range(8))
+    with_track = render(p, fake_model(), IssInfo(True, -20.0, 0.0, Pass(T, T, 70.0, 180.0), track), [])
+    without = render(p, fake_model(), IssInfo(True, -20.0, 0.0, Pass(T, T, 70.0, 180.0)), [])
+    assert with_track.tobytes() != without.tobytes()
+    assert with_track.histogram()[2] > without.histogram()[2]      # přibyly červené body (dráha v barvě ISS)
+
+
+def test_weather_line_in_sun_section():
+    from sky.weather import CloudInfo
+    p = _params(events=0, iss=0)
+    a = render(p, fake_model(), IssInfo(False, None, None, None), [], CloudInfo(44, 10, T))
+    b = render(p, fake_model(), IssInfo(False, None, None, None), [], None)
+    assert a.tobytes() != b.tobytes()

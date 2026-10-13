@@ -42,3 +42,33 @@ def test_passes_near_epoch():
         assert t <= info.next_pass.start <= t + timedelta(hours=48)
         assert info.next_pass.end > info.next_pass.start
         assert info.next_pass.max_alt >= 10
+
+
+@ephem
+def test_stale_tle_is_unavailable():
+    p = parse({"lat": "49.747", "lon": "13.378"}, config.load({}), "png")
+    e = astro.get_ephemeris(CACHE)
+    tle = iss.parse_tle(TLE_TEXT)
+    t = iss.tle_epoch(tle[1]) + timedelta(days=15)
+    assert iss.compute(p, e, tle, t) == iss.IssInfo(False, None, None, None)
+    assert iss.compute(p, e, tle, t - timedelta(days=2)).available
+
+
+@ephem
+def test_track_before_pass():
+    from skyfield.api import EarthSatellite, wgs84
+    p = parse({"lat": "49.747", "lon": "13.378"}, config.load({}), "png")
+    e = astro.get_ephemeris(CACHE)
+    tle = iss.parse_tle(TLE_TEXT)
+    t0 = iss.tle_epoch(tle[1])
+    sat = EarthSatellite(tle[1], tle[2], tle[0], e.ts)
+    topos = wgs84.latlon(49.747, 13.378)
+    passes = iss.find_visible_passes(sat, e.eph["earth"] + topos, topos, e, e.ts.from_datetime(t0),
+                                     e.ts.from_datetime(t0 + timedelta(days=10)))
+    assert passes, "v 10 dnech má být aspoň jeden viditelný přelet"
+    t = passes[0].start - timedelta(minutes=30)
+    info = iss.compute(p, e, tle, t)
+    assert info.next_pass is not None and abs((info.next_pass.start - passes[0].start).total_seconds()) < 1.0
+    assert len(info.track) >= 5 and all(a >= 9.0 for a, _ in info.track)
+    # hodinu a více před přeletem se dráha nekreslí
+    assert iss.compute(p, e, tle, t - timedelta(minutes=45)).track == ()

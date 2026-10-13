@@ -21,9 +21,10 @@ class _Resp(io.BytesIO):
 
 
 def test_download_is_size_capped(monkeypatch):
+    from tests.conftest import REAL_DOWNLOAD
     monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout: _Resp(b"x" * (netcache.MAX_BYTES + 10)))
     with pytest.raises(netcache.TooLarge):
-        netcache._download("http://x/a.ics", 1.0)
+        REAL_DOWNLOAD("http://x/a.ics", 1.0)
 
 
 def test_log_hides_query(tmp_path, monkeypatch, caplog):

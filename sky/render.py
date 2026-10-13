@@ -17,6 +17,7 @@ from sky.layout import Rect, Zones
 from sky.palette import Palette, make_palette
 from sky.params import Params
 from sky.projection import HorizonProjection, SkyProjection, clip_segment_circle, clip_segment_rect
+from sky.weather import CloudInfo, line as weather_line
 
 STAR_SIZES = ((1.0, 5), (2.0, 4), (3.0, 3), (4.0, 2), (99.0, 1))
 LINE_MIN_ALT = -15.0
@@ -24,6 +25,9 @@ LABEL_MIN_ALT = 10.0
 LABEL_MIN_MAP = 300       # popisky souhvězdí jen na mapách aspoň takto velkých (px)
 HORIZON_BAR = layout.HORIZON_BAR
 DASH = {"solid": None, "dashed": (4, 4), "dotted": (1, 2)}   # (kreslit, vynechat) v px
+ECLIPTIC_DASH = (1, 3)
+TRACK_DASH = (3, 2)
+HOLLOW_PLANETS = ("uranus", "neptune")        # jen pro dalekohled: prázdný kroužek
 Box = tuple[int, int, int, int]
 
 
@@ -38,7 +42,8 @@ class Ctx:
     big: BdfFont
 
 
-def render(params: Params, model: SkyModel, iss_info: IssInfo, events: list[Event] | None) -> Image.Image:
+def render(params: Params, model: SkyModel, iss_info: IssInfo, events: list[Event] | None,
+           weather: CloudInfo | None = None) -> Image.Image:
     pal = make_palette(params.colors, model.mode)
     img = Image.new("P", (params.w, params.h), pal["bg"])
     img.putpalette(pal.flat())
@@ -47,13 +52,15 @@ def render(params: Params, model: SkyModel, iss_info: IssInfo, events: list[Even
     show_events = params.events or params.rockets
     sections = tuple(s for s in layout.ALL_SECTIONS
                      if (s != "iss" or params.iss) and (s != "events" or show_events))
+    if weather is not None:
+        sections = sections + ("weather",)
     zones = layout.compute(params.w, params.h, params.view, sections, params.fov)
     if params.view == "sky":
         _draw_sky(ctx, zones.map, params, model, iss_info)
     else:
         _draw_horizon(ctx, zones.map, params, model, iss_info)
     if zones.info is not None:
-        _draw_info(ctx, zones, params, model, iss_info, events)
+        _draw_info(ctx, zones, params, model, iss_info, events, weather)
     return img
 
 
@@ -80,22 +87,37 @@ def _planet(ctx: Ctx, x: float, y: float, key: str = "") -> None:
     if key.startswith("saturn"):
         # prstenec: plochá elipsa pod kotoučem, kotouč ji uprostřed překryje
         ctx.d.ellipse((x - 8, y - 2.5, x + 8, y + 2.5), outline=ctx.pal["planet"])
+    if key.startswith(HOLLOW_PLANETS):
+        ctx.d.ellipse((x - 3.5, y - 3.5, x + 3.5, y + 3.5), fill=ctx.pal["bg"], outline=ctx.pal["planet"])
+        return
     ctx.d.ellipse((x - 3.5, y - 3.5, x + 3.5, y + 3.5), fill=ctx.pal["planet"], outline=ctx.pal["fg"])
 
 
-def _moon(ctx: Ctx, x: float, y: float, phase_deg: float, r: int = 8) -> None:
-    """Kotouč s fází: dorůstá (0–180°) osvětlen vpravo, couvá vlevo."""
+def moon_lit_direction(moon_xy, sun_xy) -> tuple[float, float]:
+    """Jednotkový směr od Měsíce ke Slunci v obrazových souřadnicích (osvětlená strana)."""
+    dx, dy = sun_xy[0] - moon_xy[0], sun_xy[1] - moon_xy[1]
+    n = math.hypot(dx, dy)
+    return (dx / n, dy / n) if n > 1e-6 else (1.0, 0.0)
+
+
+def _moon(ctx: Ctx, x: float, y: float, phase_deg: float, lit_dir=(1.0, 0.0), r: int = 8) -> None:
+    """Kotouč s fází: osvětlená část míří směrem ke Slunci (lit_dir), terminátor je elipsa."""
     ctx.d.ellipse((x - r, y - r, x + r, y + r), fill=ctx.pal["moon_dark"], outline=ctx.pal["fg"])
     ph = phase_deg % 360.0
-    cosp = math.cos(math.radians(ph))
-    for yy in range(-r + 1, r):
-        c = math.sqrt(r * r - yy * yy)
-        if ph < 180.0:
-            x0, x1 = c * cosp, c
-        else:
-            x0, x1 = -c, -c * cosp
-        if x1 - x0 >= 1.0:
-            ctx.d.line((x + x0, y + yy, x + x1, y + yy), fill=ctx.pal["moon_lit"])
+    ph_eff = ph if ph <= 180.0 else 360.0 - ph          # 0 = nov, 180 = úplněk
+    cosp = math.cos(math.radians(ph_eff))
+    dx, dy = lit_dir
+    lit = ctx.pal["moon_lit"]
+    cx, cy = int(round(x)), int(round(y))
+    for py in range(-r + 1, r):
+        for px in range(-r + 1, r):
+            if px * px + py * py > (r - 0.5) ** 2:
+                continue
+            u = px * dx + py * dy                        # podél směru ke Slunci
+            v = -px * dy + py * dx                       # kolmo
+            c = math.sqrt(max(r * r - v * v, 0.0))
+            if u >= c * cosp:
+                ctx.d.point((cx + px, cy + py), fill=lit)
     ctx.d.ellipse((x - r, y - r, x + r, y + r), outline=ctx.pal["fg"])
 
 
@@ -161,9 +183,9 @@ def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
             _body_label(ctx, placed, x, y, b.name, ctx.pal["label"], bounds)
     if visible(model.moon.alt, model.moon.az):
         x, y = project(model.moon.alt, model.moon.az)
-        _moon(ctx, x, y, model.moon.phase_deg)
+        _moon(ctx, x, y, model.moon.phase_deg, moon_lit_direction((x, y), project(model.sun.alt, model.sun.az)))
         placed.append((int(x) - 9, int(y) - 9, int(x) + 10, int(y) + 10))
-    if model.mode == "day" and visible(model.sun.alt, model.sun.az):
+    if visible(model.sun.alt, model.sun.az):
         x, y = project(model.sun.alt, model.sun.az)
         _sun(ctx, x, y)
         placed.append((int(x) - 14, int(y) - 14, int(x) + 15, int(y) + 15))
@@ -193,6 +215,37 @@ def _styled_line(d: ImageDraw.ImageDraw, p0, p1, fill: int, pattern) -> None:
         else:
             d.line((p0[0] + ux * t, p0[1] + uy * t, p0[0] + ux * t1, p0[1] + uy * t1), fill=fill, width=1)
         t += on + off
+
+
+def _draw_polyline(ctx: Ctx, pts, clip, wraps, ox: int, oy: int, pattern, idx: int, closed: bool = False) -> None:
+    """Lomená čára v alt/az (n, 2) s ořezem; `closed` spojí poslední bod s prvním."""
+    n = len(pts)
+    for i in range(n if closed else n - 1):
+        (a0, z0), (a1, z1) = pts[i], pts[(i + 1) % n]
+        if (a0 < LINE_MIN_ALT and a1 < LINE_MIN_ALT) or wraps(z0, z1):
+            continue
+        clipped = clip(a0, z0, a1, z1)
+        if clipped:
+            (x0, y0), (x1, y1) = clipped
+            _styled_line(ctx.d, (x0 + ox, y0 + oy), (x1 + ox, y1 + oy), idx, pattern)
+
+
+def _draw_track(ctx: Ctx, placed: list[Box], info: IssInfo, params: Params, project, clip, wraps,
+                ox: int, oy: int, model: SkyModel, bounds) -> None:
+    """Dráha blízkého přeletu ISS: čárkovaně v barvě ISS, s časem začátku a konce."""
+    if not params.iss or not info.track or info.next_pass is None:
+        return
+    pts = [(a, z) for a, z in info.track]
+    _draw_polyline(ctx, pts, clip, wraps, ox, oy, TRACK_DASH, ctx.pal["iss"])
+    tz = model.tz
+    for (a, z), when in ((pts[0], info.next_pass.start), (pts[-1], info.next_pass.end)):
+        x, y = project(a, z)
+        _body_label(ctx, placed, x, y, when.astimezone(tz).strftime("%H:%M"), ctx.pal["iss"], bounds)
+
+
+def _draw_ecliptic(ctx: Ctx, model: SkyModel, params: Params, clip, wraps, ox: int, oy: int) -> None:
+    if params.ecliptic and model.ecliptic is not None and len(model.ecliptic):
+        _draw_polyline(ctx, model.ecliptic, clip, wraps, ox, oy, ECLIPTIC_DASH, ctx.pal["ecliptic"], closed=True)
 
 
 def _draw_lines(ctx: Ctx, model: SkyModel, clip, wraps, ox: int, oy: int, style: str) -> None:
@@ -226,6 +279,7 @@ def _draw_sky(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: IssI
     def clip(a0, z0, a1, z1):
         return clip_segment_circle(proj.project(a0, z0), proj.project(a1, z1), (cx, cy), R)
 
+    _draw_ecliptic(ctx, model, params, clip, lambda z0, z1: False, ox, oy)
     _draw_lines(ctx, model, clip, lambda z0, z1: False, ox, oy, params.lines)
     for alt, az, mag in model.stars:
         if alt >= 0.0:
@@ -238,6 +292,7 @@ def _draw_sky(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: IssI
 
     placed: list[Box] = []
     _draw_bodies(ctx, placed, inside_circle, project, visible, model, iss_info, params)
+    _draw_track(ctx, placed, iss_info, params, project, clip, lambda z0, z1: False, ox, oy, model, inside_circle)
     if m.w >= LABEL_MIN_MAP:
         for text, alt, az in model.labels:
             if alt >= LABEL_MIN_ALT:
@@ -270,6 +325,7 @@ def _draw_horizon(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: 
     def clip(a0, z0, a1, z1):
         return clip_segment_rect(proj.project(a0, z0), proj.project(a1, z1), m.w, mh)
 
+    _draw_ecliptic(ctx, model, params, clip, proj.segment_wraps, ox, oy)
     _draw_lines(ctx, model, clip, proj.segment_wraps, ox, oy, params.lines)
     for alt, az, mag in model.stars:
         if proj.visible(alt, az):
@@ -281,6 +337,7 @@ def _draw_horizon(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: 
 
     placed: list[Box] = []
     _draw_bodies(ctx, placed, inside_rect, project, proj.visible, model, iss_info, params)
+    _draw_track(ctx, placed, iss_info, params, project, clip, proj.segment_wraps, ox, oy, model, inside_rect)
     if mh >= LABEL_MIN_MAP // 2:
         for text, alt, az in model.labels:
             if alt >= LABEL_MIN_ALT and proj.visible(alt, az):
@@ -295,7 +352,9 @@ def _draw_horizon(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: 
                 x, _ = project(0.0, az)
                 ctx.d.line((x, hy - 4, x, hy + 3), fill=ctx.pal["horizon"])
                 lbl = compass(az, ctx.lang)
-                draw_text(ctx.img, (x - text_width(ctx.small, lbl) / 2, hy + 5), lbl, ctx.small, ctx.pal["horizon"])
+                tw = text_width(ctx.small, lbl)
+                lx = min(max(x - tw / 2, ox), ox + m.w - tw)      # popisek na kraji se neořízne
+                draw_text(ctx.img, (lx, hy + 5), lbl, ctx.small, ctx.pal["horizon"])
 
 
 # ---------- infopanel ----------
@@ -357,16 +416,18 @@ def _draw_header(ctx: Ctx, z: Zones, model: SkyModel) -> None:
               ctx.small, ctx.pal["fg"])
 
 
-def _sec_sun(c: Cursor, model: SkyModel) -> None:
+def _sec_sun(c: Cursor, model: SkyModel, weather: CloudInfo | None = None) -> None:
     L, tz = c.ctx.lang, model.tz
     if not c.title("sun", tr(L, "sun")):
         return
     c.line(f"{tr(L, 'rise'):<7}{fmt_time(model.sun.rise, tz)}")
     c.line(f"{tr(L, 'set'):<7}{fmt_time(model.sun.set, tz)}")
-    if model.mode == "night":
+    if model.sun.alt < -0.8333:
         c.line(f"{tr(L, 'dawn_at')} {fmt_time(model.sun.next_rise, tz)}")
     else:
         c.line(f"{tr(L, 'night_from')} {fmt_time(model.sun.next_set, tz)}")
+    if weather is not None:
+        c.line(weather_line(L, tz, weather, c.w // c.ctx.small.width))
     c.gap()
 
 
@@ -435,9 +496,9 @@ def _sec_events(c: Cursor, model: SkyModel, events: list[Event] | None, title: s
 
 
 def _draw_info(ctx: Ctx, z: Zones, params: Params, model: SkyModel, iss_info: IssInfo,
-               events: list[Event] | None) -> None:
+               events: list[Event] | None, weather: CloudInfo | None = None) -> None:
     _draw_header(ctx, z, model)
-    sections = [("sun", lambda c: _sec_sun(c, model)), ("moon", lambda c: _sec_moon(c, model))]
+    sections = [("sun", lambda c: _sec_sun(c, model, weather)), ("moon", lambda c: _sec_moon(c, model))]
     if params.iss:
         sections.append(("iss", lambda c: _sec_iss(c, model, iss_info)))
     if params.events or params.rockets:

@@ -7,7 +7,7 @@ from typing import Mapping
 RGB = [(255, 255, 255), (0, 0, 0), (255, 0, 0), (255, 255, 0), (0, 0, 255), (0, 255, 0)]
 NCOLORS = {"bw": 2, "bwr": 3, "bwry": 4, "spectra": 6}   # spectra = E Ink Spectra 6
 ROLES = ("bg", "fg", "star", "line", "label", "planet", "sun",
-         "moon_lit", "moon_dark", "iss", "today", "horizon")
+         "moon_lit", "moon_dark", "iss", "today", "horizon", "ecliptic")
 
 
 @dataclass(frozen=True)
@@ -38,5 +38,6 @@ def make_palette(colors: str, mode: str) -> Palette:
     if colors in ("bwry", "spectra"):
         idx["sun"] = 3            # Měsíc zůstává černobílý: žlutý kotouč není k poznání
     if colors == "spectra":
-        idx["iss"] = 5            # zelená; modrá (4) se nepoužívá, na obzoru byla špatně čitelná
+        idx["iss"] = 5            # zelená
+        idx["ecliptic"] = 4       # modrá; na obzoru byla špatně čitelná, u tečkované ekliptiky nevadí
     return Palette(colors, mode, idx)

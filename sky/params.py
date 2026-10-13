@@ -1,6 +1,7 @@
 """Parametry požadavku (spec §3.1), společné pro HTTP i CLI."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Mapping
@@ -13,6 +14,8 @@ ROTS = (0, 90, 180, 270)
 LANGS = ("cs", "en")
 FORMATS = ("png", "bmp")
 LINES = ("solid", "dashed", "dotted")
+MODES = ("auto", "night", "day")
+CLOCK_RE = re.compile(r"^([01]?\d|2[0-3]):[0-5]\d$")
 
 
 class ParamError(ValueError):
@@ -37,6 +40,10 @@ class Params:
     fmt: str = "png"
     lines: str = "solid"
     rockets: bool = False
+    t_clock: str | None = None    # "HH:MM" = dnes v tento místní čas (řeší service podle zóny místa)
+    mode: str = "auto"
+    weather: bool = True
+    ecliptic: bool = True
 
 
 def _num(q, key, default, lo, hi, cast):
@@ -96,6 +103,10 @@ def parse(q: Mapping[str, str], cfg: Config, fmt: str = "png") -> Params:
     if fmt not in FORMATS:
         raise ParamError("formát: povolené png, bmp")
     t_raw = q.get("t")
+    t_clock = None
+    if t_raw and CLOCK_RE.match(t_raw.strip()):
+        hh, mm = t_raw.strip().split(":")
+        t_clock, t_raw = f"{int(hh):02d}:{mm}", None
     return Params(
         lat=_num(q, "lat", cfg.lat, -90.0, 90.0, float),
         lon=_num(q, "lon", cfg.lon, -180.0, 180.0, float),
@@ -113,4 +124,8 @@ def parse(q: Mapping[str, str], cfg: Config, fmt: str = "png") -> Params:
         fmt=fmt,
         lines=_choice(q, "lines", "solid", LINES),
         rockets=_flag(q, "rockets", False),
+        t_clock=t_clock,
+        mode=_choice(q, "mode", "auto", MODES),
+        weather=_flag(q, "weather", True),
+        ecliptic=_flag(q, "ecliptic", True),
     )

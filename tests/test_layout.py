@@ -100,3 +100,9 @@ def test_horizon_map_capped_at_90_degrees():
 def test_span_only_with_three_columns():
     assert compute(480, 800, "horizon").span is None
     assert compute(800, 480, "sky").span is None
+
+
+def test_weather_adds_line_to_sun_column():
+    a = compute(800, 480, "horizon", sections=("sun", "moon"), fov=120)      # na šířku strop 90° neomezuje
+    b = compute(800, 480, "horizon", sections=("sun", "moon", "weather"), fov=120)
+    assert b.info.h == a.info.h + 16 and b.map.h == a.map.h - 16

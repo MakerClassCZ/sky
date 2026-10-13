@@ -46,7 +46,10 @@ GET /health
 | `w`, `h` | 64..2000 | rozměr v px; poměr stran určuje rozložení | `800`, `480` |
 | `colors` | `bw` \| `bwr` \| `bwry` \| `spectra` | paleta: červeně planety, ISS a dnešní úkaz; žlutě Slunce; `spectra` (6 barev) navíc zelenou ISS. Měsíc, obzor a texty jsou vždy černobílé | `bw` |
 | `rot` | 0 \| 90 \| 180 \| 270 | otočení hotového obrázku po směru hodin | `0` |
-| `t` | ISO 8601 | čas vykreslení (náhledy, testy); bez zóny = UTC; roky 1900–2050 (rozsah efemeridy) | teď |
+| `t` | ISO 8601 nebo `HH:MM` | čas vykreslení; bez zóny = UTC; roky 1900–2050 (rozsah efemeridy). `HH:MM` = dnes v tento místní čas stanoviště (např. `t=22:00`: panel přes den ukazuje dnešní večerní oblohu) | teď |
+| `mode` | `auto` \| `night` \| `day` | režim podle Slunce, nebo vynucený tmavý / světlý | `auto` |
+| `weather` | 0 \| 1 | oblačnost na noc v sekci Slunce (Open-Meteo) | `1` |
+| `ecliptic` | 0 \| 1 | tečkovaná ekliptika (u `spectra` modrá) | `1` |
 | `iss`, `events` | 0 \| 1 | vypnutí sekce ISS / úkazů | `1` |
 | `rockets` | 0 \| 1 | starty raket (Launch Library 2) v seznamu úkazů, s časem startu | `0` |
 | `lines` | `solid` \| `dashed` \| `dotted` | spojnice souhvězdí plné, čárkované, tečkované (menší kontrast) | `solid` |
@@ -86,6 +89,7 @@ python -m sky warmup
 | `SKY_EVENTS_URL` | ICS kalendář úkazů | sdílený kalendář Jana Tichého |
 | `SKY_TLE_URL` | zdroj TLE pro ISS | Celestrak, NORAD 25544 |
 | `SKY_ROCKETS_URL` | JSON nadcházejících startů (Launch Library 2) | `ll.thespacedevs.com/2.2.0/launch/upcoming/` |
+| `SKY_WEATHER_URL` | základ URL předpovědi (Open-Meteo forecast API) | `api.open-meteo.com/v1/forecast` |
 | `SKY_RENDER_CACHE_S` | TTL cache hotových obrázků v sekundách | `300` |
 | `SKY_EVENT_TYPES` | typy úkazů k zobrazení: `eye,scope,warn,moon,none,info` | `eye,scope,warn,moon` |
 | `SKY_RATE_LIMIT` | nejvýš tolik požadavků na `/sky.*` za minutu z jedné IP (429 při překročení); `0` vypne | `60` |
@@ -129,10 +133,12 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
 ## Co je na obrázku
 
 - **Mapa**: hvězdy do 4,5 mag (velikost podle jasnosti), čáry a názvy souhvězdí,
-  Merkur až Saturn, Měsíc s vykreslenou fází, přes den Slunce, ISS je-li nad
-  obzorem. `sky` je azimutální mapa (obzor = kružnice, světové strany kolem),
+  Merkur až Neptun (Uran a Neptun prázdným kroužkem, jsou jen pro dalekohled),
+  Měsíc s fází natočenou ke Slunci, Slunce je-li nad obzorem, tečkovaná ekliptika,
+  ISS je-li nad obzorem a hodinu před viditelným přeletem jeho čárkovaná dráha
+  s časem začátku a konce. `sky` je azimutální mapa (obzor = kružnice, světové strany kolem),
   `horizon` je panorama azimut × výška s obzorem dole.
-- **Infopanel**: datum a čas, Slunce (východ, západ, kdy začíná noc / svítá),
+- **Infopanel**: datum a čas, Slunce (východ, západ, kdy začíná noc / svítá, oblačnost na noc),
   Měsíc (východ, západ, fáze), ISS (nejbližší viditelný přelet do 48 h: nad 10°,
   osvětlená, za občanského soumraku), úkazy (dalších 12 z kalendáře, dnešní
   zvýrazněný; volitelně i starty raket s časem). U `horizon` dostane infopanel
@@ -145,6 +151,10 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
   (BSD-3, `sky/data/LICENSE-d3-celestial`); hvězdy z katalogu XHIP, čáry podle IAU.
 - Efemerida JPL DE421 a výpočty: [Skyfield](https://rhodesmill.org/skyfield/) (MIT).
 - Dráha ISS: TLE z [Celestrak](https://celestrak.org/).
+- Oblačnost: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0, bez klíče, nekomerční použití
+  zdarma do ~10 000 požadavků denně). Souřadnice se zaokrouhlují na 0,05° a předpověď se
+  cachuje hodinu, takže i veřejná instance s mnoha panely dělá jen desítky dotazů za hodinu.
+  Pro komerční provoz je potřeba jejich placený tarif. Weather data by Open-Meteo.com.
 - Starty raket: [Launch Library 2](https://thespacedevs.com/llapi) (The Space Devs), bez klíče,
   anonymně 15 dotazů za hodinu; služba se ptá nejvýš jednou za 6 hodin. Proběhlé starty a
   starty bez potvrzeného data se nezobrazují.

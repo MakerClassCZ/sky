@@ -17,13 +17,15 @@ TEXTS = {
            "phase": "Fáze", "waxing": "dorůstá", "waning": "couvá",
            "no_pass": "žádný do 48 h", "unavailable": "nedostupné", "max": "max",
            "none": "nic do 60 dnů", "data_from": "Zdroj: jantichy.cz/ukazy",
-           "events_launches": "Úkazy a starty", "launches": "Starty"},
+           "events_launches": "Úkazy a starty", "launches": "Starty",
+           "clouds": "Oblačnost v noci", "at": "v"},
     "en": {"sun": "Sun", "moon": "Moon", "iss": "ISS", "events": "Events",
            "rise": "Rise", "set": "Set", "night_from": "Night from", "dawn_at": "Dawn at",
            "phase": "Phase", "waxing": "waxing", "waning": "waning",
            "no_pass": "none in 48 h", "unavailable": "unavailable", "max": "max",
            "none": "none in 60 days", "data_from": "Source: jantichy.cz/ukazy",
-           "events_launches": "Events and launches", "launches": "Launches"},
+           "events_launches": "Events and launches", "launches": "Launches",
+           "clouds": "Night clouds", "at": "at"},
 }
 
 

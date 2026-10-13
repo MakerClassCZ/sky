@@ -6,9 +6,10 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sky import astro, events, iss, output, render, rockets
+from sky import astro, events, iss, output, render, rockets, weather
 from sky.catalog import load_catalog
 from sky.config import Config
+from sky.geo import tz_for
 from sky.params import Params
 
 log = logging.getLogger(__name__)
@@ -34,6 +35,11 @@ def _key(p: Params, t: datetime) -> tuple:
 
 def build(params: Params, cfg: Config, now: datetime | None = None) -> Result:
     t = params.t or now or datetime.now(timezone.utc)
+    if params.t_clock and params.t is None:
+        # "dnes v HH:MM" v místním čase stanoviště
+        local = t.astimezone(tz_for(params.lat, params.lon))
+        hh, mm = (int(x) for x in params.t_clock.split(":"))
+        t = local.replace(hour=hh, minute=mm, second=0, microsecond=0).astimezone(timezone.utc)
     key = _key(params, t)
     hit = _cache.get(key)
     if hit and time.time() - hit[0] < cfg.render_cache_s:
@@ -52,7 +58,13 @@ def build(params: Params, cfg: Config, now: datetime | None = None) -> Result:
     evs = events.upcoming(cfg, today) if params.events else []
     if params.rockets:
         evs = events.merge(evs or [], rockets.upcoming(cfg, today, model.tz), 12)
-    img = render.render(params, model, iss_info, evs)
+    clouds = None
+    if params.weather:
+        night_start = t if model.sun.alt < astro.NIGHT_SUN_ALT else model.sun.next_set
+        night_end = model.sun.next_rise
+        if night_start is not None and night_end is not None and night_end > night_start:
+            clouds = weather.tonight(cfg, params.lat, params.lon, night_start, night_end)
+    img = render.render(params, model, iss_info, evs, clouds)
     data, mime = output.encode(img, params.fmt, params.rot)
     log.info("render %s %dx%d %s %s mode=%s %.0f ms", params.view, params.w, params.h, params.colors,
              params.fmt, model.mode, (time.perf_counter() - t0) * 1000)

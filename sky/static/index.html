@@ -176,9 +176,17 @@
 
     <fieldset>
       <legend>Čas</legend>
-      <label class="check"><input type="checkbox" id="now" checked> Teď (displej dostává aktuální oblohu)</label>
-      <label class="f">Jiný čas pro náhled <input name="t" type="datetime-local" disabled></label>
-      <p class="hint">Čas se zadává v čase tohoto prohlížeče; do adresy se přidá jen při vypnutém „Teď“.</p>
+      <div class="seg">
+        <label><input type="radio" name="tmode" value="now" checked><span>Teď</span></label>
+        <label><input type="radio" name="tmode" value="clock"><span>Dnes v…</span></label>
+        <label><input type="radio" name="tmode" value="fixed"><span>Jiný čas pro náhled</span></label>
+      </div>
+      <label class="f" id="clockrow" hidden>Každý den v tento místní čas stanoviště <input name="clock" type="time" value="22:00"></label>
+      <label class="f" id="fixedrow" hidden>Čas pro náhled (čas tohoto prohlížeče) <input name="t" type="datetime-local"></label>
+      <p class="hint" id="thint">Displej dostává aktuální oblohu; přes den světlý režim.</p>
+      <label class="f">Režim
+        <select name="mode"><option value="auto">podle Slunce (den / noc)</option><option value="night">vždy noční (tmavý)</option><option value="day">vždy denní (světlý)</option></select>
+      </label>
     </fieldset>
 
     <fieldset>
@@ -186,6 +194,8 @@
       <label class="check"><input type="checkbox" name="iss" checked> Přelety ISS</label>
       <label class="check"><input type="checkbox" name="events" checked> Kalendář úkazů</label>
       <label class="check"><input type="checkbox" name="rockets"> Starty raket (Launch Library 2)</label>
+      <label class="check"><input type="checkbox" name="weather" checked> Oblačnost na noc (Open-Meteo)</label>
+      <label class="check"><input type="checkbox" name="ecliptic" checked> Ekliptika (tečkovaně)</label>
       <div class="seg">
         <label><input type="radio" name="lang" value="cs" checked><span>Česky</span></label>
         <label><input type="radio" name="lang" value="en"><span>English</span></label>
@@ -207,7 +217,6 @@
   const img = document.getElementById('preview');
   const status = document.getElementById('status');
   const urlBox = document.getElementById('url');
-  const nowBox = document.getElementById('now');
   const tField = f.elements.t;
   const COMPASS = ['sever', 'severovýchod', 'východ', 'jihovýchod', 'jih', 'jihozápad', 'západ', 'severozápad'];
   const STORE = 'sky-config';
@@ -243,7 +252,12 @@
     if (!q('iss').checked) p.set('iss', '0');
     if (!q('events').checked) p.set('events', '0');
     if (val('lang') !== 'cs') p.set('lang', val('lang'));
-    if (withTime && !nowBox.checked && tField.value) p.set('t', localIso(tField.value));
+    const tm = val('tmode');
+    if (tm === 'clock' && val('clock')) p.set('t', val('clock'));
+    if (withTime && tm === 'fixed' && tField.value) p.set('t', localIso(tField.value));
+    if (val('mode') !== 'auto') p.set('mode', val('mode'));
+    if (!q('weather').checked) p.set('weather', '0');
+    if (!q('ecliptic').checked) p.set('ecliptic', '0');
     if (val('token')) p.set('token', val('token'));
     return p;
   }
@@ -261,9 +275,12 @@
   let timer = null, ctrl = null;
   async function refresh() {
     urlBox.value = buildUrl(false);
-    document.getElementById('urlnote').textContent = nowBox.checked
+    const tm = val('tmode');
+    document.getElementById('urlnote').textContent = tm === 'now'
       ? 'Čas se do adresy nepřidává; displej dostane vždy aktuální oblohu.'
-      : 'Čas pro náhled se do adresy pro displej nepřidává. Pro pevný čas připojte &t=' + localIso(tField.value) + '.';
+      : tm === 'clock'
+        ? 'Displej bude ukazovat oblohu dnešního dne v ' + val('clock') + ' místního času.'
+        : 'Čas pro náhled se do adresy pro displej nepřidává. Pro pevný čas připojte &t=' + localIso(tField.value) + '.';
     const b = base();
     if (!b) { status.textContent = 'Vyplňte adresu služby, náhled se načte z ní.'; return; }
     if (ctrl) ctrl.abort();
@@ -296,8 +313,15 @@
       : 'U celé oblohy je tento směr dole, tedy před vámi.';
     document.getElementById('azv').textContent = `${val('az')}° ${compass(+val('az'))}`;
     document.getElementById('fovv').textContent = `${val('fov')}°`;
-    tField.disabled = nowBox.checked;
-    if (!nowBox.checked && !tField.value) {
+    const tm = val('tmode');
+    document.getElementById('clockrow').hidden = tm !== 'clock';
+    document.getElementById('fixedrow').hidden = tm !== 'fixed';
+    document.getElementById('thint').textContent = tm === 'now'
+      ? 'Displej dostává aktuální oblohu; přes den světlý režim.'
+      : tm === 'clock'
+        ? 'Panel ukazuje, jak bude obloha vypadat dnes v zadaný čas (např. večer ve 22:00).'
+        : 'Jen pro náhled; do adresy pro displej se nepřidává.';
+    if (tm === 'fixed' && !tField.value) {
       const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
       tField.value = d.toISOString().slice(0, 16);
     }
@@ -311,7 +335,6 @@
       else if (el.type === 'checkbox') o[el.name] = el.checked;
       else o[el.name] = el.value;
     }
-    o.now = nowBox.checked;
     localStorage.setItem(STORE, JSON.stringify(o));
   }
   function load() {
@@ -322,11 +345,10 @@
       else if (el.type === 'checkbox') el.checked = !!o[el.name];
       else el.value = o[el.name];
     }
-    if ('now' in o) nowBox.checked = !!o.now;
   }
 
   f.addEventListener('input', () => { syncUi(); save(); schedule(); });
-  nowBox.addEventListener('change', () => { syncUi(); save(); schedule(); });
+  f.addEventListener('change', () => { syncUi(); save(); schedule(); });
 
   for (const b of document.querySelectorAll('[data-size]')) {
     b.addEventListener('click', () => {

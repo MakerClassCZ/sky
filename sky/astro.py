@@ -18,7 +18,18 @@ from sky.params import Params
 NIGHT_SUN_ALT = -0.8333
 EPHEMERIS = "de421.bsp"
 PLANETS = [("mercury", "Merkur", "Mercury"), ("venus", "Venuše", "Venus"), ("mars", "Mars", "Mars"),
-           ("jupiter barycenter", "Jupiter", "Jupiter"), ("saturn barycenter", "Saturn", "Saturn")]
+           ("jupiter barycenter", "Jupiter", "Jupiter"), ("saturn barycenter", "Saturn", "Saturn"),
+           ("uranus barycenter", "Uran", "Uranus"), ("neptune barycenter", "Neptun", "Neptune")]
+OBLIQUITY_DEG = 23.44
+
+
+def ecliptic_radec(step_deg: float = 5.0) -> np.ndarray:
+    """Body ekliptiky (ra_hours, dec_deg) po `step_deg` ekliptikální délky, J2000."""
+    lam = np.radians(np.arange(0.0, 360.0, step_deg))
+    eps = np.radians(OBLIQUITY_DEG)
+    ra = np.degrees(np.arctan2(np.sin(lam) * np.cos(eps), np.cos(lam))) % 360.0 / 15.0
+    dec = np.degrees(np.arcsin(np.sin(lam) * np.sin(eps)))
+    return np.column_stack([ra, dec])
 
 
 class Ephemeris:
@@ -84,6 +95,7 @@ class SkyModel:
     planets: list[Body]
     sun: SunInfo
     moon: MoonInfo
+    ecliptic: np.ndarray = None                         # (n, 2): alt, az podél ekliptiky
 
 
 def first_or_none(times, oks) -> datetime | None:
@@ -140,7 +152,11 @@ def compute(params: Params, eph: Ephemeris, catalog: Catalog, lang: str, t: date
 
     sun_alt, sun_az = _altaz(at, e["sun"])
     moon_alt, moon_az = _altaz(at, e["moon"])
-    mode = "night" if sun_alt < NIGHT_SUN_ALT else "day"
+    mode = params.mode if params.mode != "auto" else ("night" if sun_alt < NIGHT_SUN_ALT else "day")
+
+    ecl = ecliptic_radec()
+    ealt, eaz = _stars_altaz(at, ecl[:, 0], ecl[:, 1])
+    ecliptic = np.column_stack([ealt, eaz])
 
     local0 = t.astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
     day0 = ts.from_datetime(local0)
@@ -161,4 +177,4 @@ def compute(params: Params, eph: Ephemeris, catalog: Catalog, lang: str, t: date
         rise=first_or_none(*almanac.find_risings(observer, e["moon"], day0, day1)),
         set=first_or_none(*almanac.find_settings(observer, e["moon"], day0, day1)),
     )
-    return SkyModel(t, tz, params.lat, params.lon, mode, stars, lines, labels, planets, sun, moon)
+    return SkyModel(t, tz, params.lat, params.lon, mode, stars, lines, labels, planets, sun, moon, ecliptic)

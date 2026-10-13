@@ -1,0 +1,137 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - heading "Sky – nastavení panelu" [level=1] [ref=e3]
+    - paragraph [ref=e4]: Nastavte, co má displej ukazovat; náhled je přesně to, co dostane.
+  - main [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e8]: Vykresluji…
+      - generic [ref=e9]:
+        - generic [ref=e10]: Adresa pro Živý obraz (zdroj „obrázek z URL“)
+        - generic [ref=e11]:
+          - textbox "Adresa pro Živý obraz (zdroj „obrázek z URL“)" [ref=e12]: http://127.0.0.1:8765/sky.png?lat=49.747&lon=13.378&view=horizon&fov=180
+          - button "Kopírovat" [ref=e13] [cursor=pointer]
+        - generic [ref=e14]: Čas se do adresy nepřidává; displej dostane vždy aktuální oblohu.
+    - generic [ref=e15]:
+      - group "Stanoviště" [ref=e16]:
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - text: Zeměpisná šířka
+            - spinbutton "Zeměpisná šířka" [ref=e20]: "49.747"
+          - generic [ref=e21]:
+            - text: Zeměpisná délka
+            - spinbutton "Zeměpisná délka" [ref=e22]: "13.378"
+        - button "Použít polohu tohoto zařízení" [ref=e23] [cursor=pointer]
+      - group "Pohled" [ref=e24]:
+        - generic [ref=e26]:
+          - generic [ref=e27] [cursor=pointer]:
+            - radio "Celá obloha"
+            - generic [ref=e28]: Celá obloha
+          - generic [ref=e29] [cursor=pointer]:
+            - radio "Z okna (výsek obzoru)" [checked]
+            - generic [ref=e30]: Z okna (výsek obzoru)
+        - generic [ref=e31]:
+          - text: Směr
+          - status "Směr 180" [ref=e33]: 180° jih
+          - slider [ref=e34]: "180"
+        - paragraph [ref=e35]: Směr, kterým se díváte z okna; výsek je rozložen symetricky kolem něj.
+        - generic [ref=e36]:
+          - text: Šířka výseku
+          - status "Šířka výseku 120" [ref=e38]: 180°
+          - slider [ref=e39]: "180"
+      - group "Panel" [ref=e40]:
+        - generic [ref=e42]:
+          - button "800×480" [ref=e43]
+          - button "480×800" [ref=e44]
+          - button "640×384" [ref=e45]
+          - button "400×300" [ref=e46]
+          - button "296×128" [ref=e47]
+          - button "Otočit šířku a výšku" [ref=e48]
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - text: Šířka (px)
+            - spinbutton "Šířka (px)" [ref=e51]: "800"
+          - generic [ref=e52]:
+            - text: Výška (px)
+            - spinbutton "Výška (px)" [ref=e53]: "480"
+        - generic [ref=e54]:
+          - generic [ref=e55] [cursor=pointer]:
+            - radio "Černobílý" [checked]
+            - generic [ref=e56]: Černobílý
+          - generic [ref=e57] [cursor=pointer]:
+            - radio "+ červená"
+            - generic [ref=e58]: + červená
+          - generic [ref=e59] [cursor=pointer]:
+            - radio "+ červená a žlutá"
+            - generic [ref=e60]: + červená a žlutá
+          - generic [ref=e61] [cursor=pointer]:
+            - radio "Spectra 6"
+            - generic [ref=e62]: Spectra 6
+        - generic [ref=e63]:
+          - text: Spojnice souhvězdí
+          - combobox "Spojnice souhvězdí" [ref=e64]:
+            - option "plné" [selected]
+            - option "čárkované"
+            - option "tečkované"
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - text: Formát
+            - combobox "Formát" [ref=e67]:
+              - option "PNG" [selected]
+              - option "BMP"
+          - generic [ref=e68]:
+            - text: Otočení výstupu
+            - combobox "Otočení výstupu" [ref=e69]:
+              - option "žádné" [selected]
+              - option "90°"
+              - option "180°"
+              - option "270°"
+      - group "Čas" [ref=e70]:
+        - generic [ref=e72]:
+          - generic [ref=e73] [cursor=pointer]:
+            - radio "Teď" [checked]
+            - generic [ref=e74]: Teď
+          - generic [ref=e75] [cursor=pointer]:
+            - radio "Dnes v…"
+            - generic [ref=e76]: Dnes v…
+          - generic [ref=e77] [cursor=pointer]:
+            - radio "Jiný čas pro náhled"
+            - generic [ref=e78]: Jiný čas pro náhled
+        - paragraph [ref=e79]: Displej dostává aktuální oblohu; přes den světlý režim.
+        - generic [ref=e80]:
+          - text: Režim
+          - combobox "Režim" [ref=e81]:
+            - option "podle Slunce (den / noc)" [selected]
+            - option "vždy noční (tmavý)"
+            - option "vždy denní (světlý)"
+      - group "Obsah" [ref=e82]:
+        - generic [ref=e84]:
+          - checkbox "Přelety ISS" [checked] [ref=e85]
+          - text: Přelety ISS
+        - generic [ref=e86]:
+          - checkbox "Kalendář úkazů" [checked] [ref=e87]
+          - text: Kalendář úkazů
+        - generic [ref=e88]:
+          - checkbox "Starty raket (Launch Library 2)" [ref=e89]
+          - text: Starty raket (Launch Library 2)
+        - generic [ref=e90]:
+          - checkbox "Oblačnost na noc (Open-Meteo)" [checked] [ref=e91]
+          - text: Oblačnost na noc (Open-Meteo)
+        - generic [ref=e92]:
+          - checkbox "Ekliptika (tečkovaně)" [checked] [ref=e93]
+          - text: Ekliptika (tečkovaně)
+        - generic [ref=e94]:
+          - generic [ref=e95] [cursor=pointer]:
+            - radio "Česky" [checked]
+            - generic [ref=e96]: Česky
+          - generic [ref=e97] [cursor=pointer]:
+            - radio "English"
+            - generic [ref=e98]: English
+      - group "Služba" [ref=e99]:
+        - generic [ref=e101]:
+          - text: Adresa služby
+          - textbox "Adresa služby" [ref=e102]:
+            - /placeholder: https://sky.vase-domena.cz
+        - generic [ref=e103]:
+          - text: Token (je-li nastaven SKY_TOKEN)
+          - textbox "Token (je-li nastaven SKY_TOKEN)" [ref=e104]
+        - paragraph [ref=e105]: Nastavení se ukládá v tomto prohlížeči.

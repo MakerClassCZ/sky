@@ -40,7 +40,7 @@ def test_night_in_plzen_and_polaris():
     alt, az, _ = m.stars[i]
     assert abs(alt - 49.7) < 1.0 and (az < 1.5 or az > 358.5)
     assert m.tz.key == "Europe/Prague"
-    assert len(m.planets) == 5 and all(isinstance(b.alt, float) for b in m.planets)
+    assert len(m.planets) == 7 and all(isinstance(b.alt, float) for b in m.planets)
     assert any(lbl == "Velká medvědice" for lbl, _, _ in m.labels)
     assert len(m.lines) == len(cat.lines)
     assert all(seg.shape[1] == 2 for _, segs in m.lines for seg in segs)
@@ -60,3 +60,21 @@ def test_sun_times_plzen():
     assert m.sun.next_rise > t
     assert 0.0 <= m.moon.fraction <= 1.0
     assert 0.0 <= m.moon.phase_deg < 360.0
+
+
+def test_ecliptic_points_cover_sky():
+    pts = astro.ecliptic_radec(step_deg=10)
+    assert pts.shape == (36, 2)
+    assert abs(pts[:, 1]).max() == pytest.approx(23.44, abs=0.1)     # max deklinace = sklon ekliptiky
+    assert pts[0, 0] == pytest.approx(0.0) and pts[0, 1] == pytest.approx(0.0)
+
+
+@ephem
+def test_outer_planets_mode_force_and_ecliptic():
+    e = astro.get_ephemeris(CACHE)
+    p = parse(dict(PLZEN, mode="night"), config.load({}), "png")
+    t = datetime(2026, 10, 13, 12, 0, tzinfo=timezone.utc)
+    m = astro.compute(p, e, load_catalog(), "cs", t)
+    assert m.mode == "night" and m.sun.alt > 0                 # vynuceno, Slunce je přitom nad obzorem
+    assert [b.name for b in m.planets] == ["Merkur", "Venuše", "Mars", "Jupiter", "Saturn", "Uran", "Neptun"]
+    assert m.ecliptic.shape[1] == 2 and len(m.ecliptic) >= 72

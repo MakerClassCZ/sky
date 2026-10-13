@@ -9,7 +9,7 @@ from pathlib import Path
 from sky import config, service
 from sky.params import ParamError, parse
 
-QUERY_KEYS = ("lat", "lon", "view", "az", "fov", "w", "h", "colors", "rot", "t", "lang", "lines")
+QUERY_KEYS = ("lat", "lon", "view", "az", "fov", "w", "h", "colors", "rot", "t", "lang", "lines", "mode")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -22,6 +22,8 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--no-iss", action="store_true")
     r.add_argument("--no-events", action="store_true")
     r.add_argument("--rockets", action="store_true", help="přidá starty raket do úkazů")
+    r.add_argument("--no-weather", action="store_true")
+    r.add_argument("--no-ecliptic", action="store_true")
     r.add_argument("--out", required=True)
 
     s = sub.add_parser("serve", help="spustí HTTP službu (v kontejneru použij --host 0.0.0.0)")
@@ -54,6 +56,10 @@ def main(argv=None) -> int:
         q["events"] = "0"
     if a.rockets:
         q["rockets"] = "1"
+    if a.no_weather:
+        q["weather"] = "0"
+    if a.no_ecliptic:
+        q["ecliptic"] = "0"
     fmt = Path(a.out).suffix.lstrip(".").lower() or "png"
     try:
         params = parse(q, cfg, fmt)

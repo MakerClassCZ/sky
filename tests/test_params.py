@@ -68,3 +68,17 @@ def test_rockets_flag():
 
 def test_spectra_colors():
     assert parse({"colors": "spectra"}, CFG_LOC, "png").colors == "spectra"
+
+
+def test_clock_time_and_mode_and_flags():
+    p = parse({"t": "22:00"}, CFG_LOC, "png")
+    assert p.t is None and p.t_clock == "22:00"
+    p = parse({"t": "2026-10-13T22:00+02:00"}, CFG_LOC, "png")
+    assert p.t_clock is None
+    assert parse({}, CFG_LOC, "png").mode == "auto"
+    assert parse({"mode": "night"}, CFG_LOC, "png").mode == "night"
+    assert parse({}, CFG_LOC, "png").weather is True and parse({"weather": "0"}, CFG_LOC, "png").weather is False
+    assert parse({}, CFG_LOC, "png").ecliptic is True and parse({"ecliptic": "0"}, CFG_LOC, "png").ecliptic is False
+    for bad in ({"t": "25:00"}, {"t": "7:5"}, {"mode": "dark"}):
+        with pytest.raises(ParamError):
+            parse(bad, CFG_LOC, "png")
