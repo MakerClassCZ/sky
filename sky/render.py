@@ -252,7 +252,7 @@ def _draw_sky(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: IssI
         dxn, dyn = (x - cx) / R, (y - cy) / R          # jednotkový směr ven z kružnice
         px = x + dxn * (proj.margin / 2 + 1) + ox - text_width(font, lbl) / 2
         py = y + dyn * (proj.margin / 2 + 1) + oy - font.height / 2
-        draw_text(ctx.img, (px, py), lbl, font, ctx.pal["fg"])
+        draw_text(ctx.img, (px, py), lbl, font, ctx.pal["horizon"])
 
 
 # ---------- mapa: pohled na obzor ----------
@@ -295,7 +295,7 @@ def _draw_horizon(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: 
                 x, _ = project(0.0, az)
                 ctx.d.line((x, hy - 4, x, hy + 3), fill=ctx.pal["horizon"])
                 lbl = compass(az, ctx.lang)
-                draw_text(ctx.img, (x - text_width(ctx.small, lbl) / 2, hy + 5), lbl, ctx.small, ctx.pal["fg"])
+                draw_text(ctx.img, (x - text_width(ctx.small, lbl) / 2, hy + 5), lbl, ctx.small, ctx.pal["horizon"])
 
 
 # ---------- infopanel ----------

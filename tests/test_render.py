@@ -39,12 +39,12 @@ def _params(**q):
 
 @pytest.mark.parametrize("view", ["sky", "horizon"])
 @pytest.mark.parametrize("w,h", [(800, 480), (480, 800)])
-@pytest.mark.parametrize("colors", ["bw", "bwr", "bwry"])
+@pytest.mark.parametrize("colors", ["bw", "bwr", "bwry", "spectra"])
 def test_render_sizes_and_palette(view, w, h, colors):
     img = render(_params(view=view, w=w, h=h, colors=colors), fake_model(), ISS, EVENTS)
     assert img.mode == "P" and img.size == (w, h)
     used = {i for i, c in enumerate(img.histogram()) if c}
-    assert max(used) < {"bw": 2, "bwr": 3, "bwry": 4}[colors]
+    assert max(used) < {"bw": 2, "bwr": 3, "bwry": 4, "spectra": 6}[colors]
     assert len(used) >= 2
 
 

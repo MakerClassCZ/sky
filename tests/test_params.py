@@ -64,3 +64,7 @@ def test_lines_style():
 def test_rockets_flag():
     assert parse({}, CFG_LOC, "png").rockets is False
     assert parse({"rockets": "1"}, CFG_LOC, "png").rockets is True
+
+
+def test_spectra_colors():
+    assert parse({"colors": "spectra"}, CFG_LOC, "png").colors == "spectra"

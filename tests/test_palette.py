@@ -21,8 +21,18 @@ def test_bwr_roles():
 
 def test_bwry_roles():
     p = make_palette("bwry", "day")
-    assert p["sun"] == 3 and p["moon_lit"] == 3 and p["planet"] == 2
+    assert p["sun"] == 3 and p["planet"] == 2
+    assert p["moon_lit"] == p["fg"]          # Měsíc zůstává černobílý, jinak není k poznání
     assert p.ncolors == 4 and len(p.flat()) == 12
+
+
+def test_spectra_roles():
+    p = make_palette("spectra", "night")
+    assert p.ncolors == 6 and len(p.flat()) == 18
+    assert p.flat()[12:] == [0, 0, 255, 0, 255, 0]          # 4 = modrá, 5 = zelená
+    assert p["sun"] == 3 and p["planet"] == 2 and p["today"] == 2
+    assert p["iss"] == 5 and p["horizon"] == 4
+    assert p["moon_lit"] == p["fg"] and p["line"] == p["fg"]
 
 
 def test_all_roles_defined():

@@ -4,8 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping
 
-RGB = [(255, 255, 255), (0, 0, 0), (255, 0, 0), (255, 255, 0)]
-NCOLORS = {"bw": 2, "bwr": 3, "bwry": 4}
+RGB = [(255, 255, 255), (0, 0, 0), (255, 0, 0), (255, 255, 0), (0, 0, 255), (0, 255, 0)]
+NCOLORS = {"bw": 2, "bwr": 3, "bwry": 4, "spectra": 6}   # spectra = E Ink Spectra 6
 ROLES = ("bg", "fg", "star", "line", "label", "planet", "sun",
          "moon_lit", "moon_dark", "iss", "today", "horizon")
 
@@ -32,10 +32,12 @@ def make_palette(colors: str, mode: str) -> Palette:
     idx = {r: fg for r in ROLES}
     idx["bg"] = bg
     idx["moon_dark"] = bg
-    if colors in ("bwr", "bwry"):
+    if colors in ("bwr", "bwry", "spectra"):
         for r in ("planet", "sun", "iss", "today"):
             idx[r] = 2
-    if colors == "bwry":
-        idx["sun"] = 3
-        idx["moon_lit"] = 3
+    if colors in ("bwry", "spectra"):
+        idx["sun"] = 3            # Měsíc zůstává černobílý: žlutý kotouč není k poznání
+    if colors == "spectra":
+        idx["iss"] = 5            # zelená
+        idx["horizon"] = 4        # modrá: obzor a světové strany
     return Palette(colors, mode, idx)

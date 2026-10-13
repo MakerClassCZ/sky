@@ -8,7 +8,7 @@ from typing import Mapping
 from sky.config import Config
 
 VIEWS = ("sky", "horizon")
-COLORS = ("bw", "bwr", "bwry")
+COLORS = ("bw", "bwr", "bwry", "spectra")
 ROTS = (0, 90, 180, 270)
 LANGS = ("cs", "en")
 FORMATS = ("png", "bmp")

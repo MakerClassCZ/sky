@@ -54,3 +54,10 @@ def test_rotation_swaps_size_and_keeps_pixel():
     # pixel (1,1) z originálu se po otočení o 90° po směru hodin dostane na (20-1-1, 1) = (18, 1)
     assert back.convert("RGB").getpixel((18, 1)) == (255, 255, 255)
     assert back.convert("RGB").getpixel((1, 1)) == (0, 0, 0)
+
+
+def test_png_spectra_palette():
+    data, _ = encode(_img("spectra"), "png", 0)
+    back = Image.open(io.BytesIO(data))
+    assert back.mode == "P" and back.getpalette()[:18] == [255, 255, 255, 0, 0, 0, 255, 0, 0, 255, 255, 0, 0, 0, 255, 0, 255, 0]
+    assert data[24] == 4          # IHDR bit depth = 4 (6 barev)

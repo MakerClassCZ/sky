@@ -44,7 +44,7 @@ GET /health
 | `az` | 0..360 | `sky`: azimut dole (co máte před sebou); `horizon`: střed pohledu | `180` (jih) |
 | `fov` | 30..180 | jen `horizon`: šířka zorného pole ve stupních | `120` |
 | `w`, `h` | 64..2000 | rozměr v px; poměr stran určuje rozložení | `800`, `480` |
-| `colors` | `bw` \| `bwr` \| `bwry` | paleta (červeně planety, ISS, dnešní úkaz; žlutě Slunce a Měsíc) | `bw` |
+| `colors` | `bw` \| `bwr` \| `bwry` \| `spectra` | paleta: červeně planety, ISS a dnešní úkaz; žlutě Slunce; `spectra` (6 barev) navíc zelenou ISS a modrý obzor. Měsíc je vždy černobílý | `bw` |
 | `rot` | 0 \| 90 \| 180 \| 270 | otočení hotového obrázku po směru hodin | `0` |
 | `t` | ISO 8601 | čas vykreslení (náhledy, testy); bez zóny = UTC; roky 1900–2050 (rozsah efemeridy) | teď |
 | `iss`, `events` | 0 \| 1 | vypnutí sekce ISS / úkazů | `1` |
@@ -54,8 +54,9 @@ GET /health
 | `token` | | povinný, když je nastaven `SKY_TOKEN` | – |
 
 Přípona určuje formát: `.png` je indexované PNG s paletou v barvách panelu
-(1 bit pro `bw`, 2 bity jinak), `.bmp` je 1 bpp pro `bw` a 8 bpp indexované pro
-`bwr`/`bwry`. Pozor: v 1bpp BMP je podle konvence Pillow/Windows index 0 černá a
+(1 bit pro `bw`, 2 bity pro `bwr`/`bwry`, 4 bity pro `spectra`), `.bmp` je 1 bpp
+pro `bw` a 8 bpp indexované pro ostatní. Pořadí barev v paletě: bílá, černá,
+červená, žlutá, modrá, zelená. Pozor: v 1bpp BMP je podle konvence Pillow/Windows index 0 černá a
 1 bílá (opačně než v PNG paletě); firmware má číst paletu z hlavičky. Odpověď
 nese hlavičku `X-Sky-Mode: night|day`. Služba nezapisuje access log (URL nese
 token); každé vykreslení loguje jeden řádek bez parametrů. Chybné parametry
