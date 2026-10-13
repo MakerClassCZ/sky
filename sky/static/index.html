@@ -84,6 +84,8 @@
   .seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 1px; }
   .check { display: flex; align-items: center; gap: 8px; color: var(--ink); }
   .check input { width: 18px; height: 18px; min-height: 0; accent-color: var(--focus); }
+  a.src { color: var(--ink-dim); font-size: 13px; margin-left: 4px; text-decoration: underline dotted; }
+  a.src:hover, a.src:focus-visible { color: var(--ink); }
   button.primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; cursor: pointer; }
   button.quiet { cursor: pointer; color: var(--ink-dim); }
   button.quiet:hover, button.primary:hover { filter: brightness(1.12); }
@@ -192,9 +194,9 @@
     <fieldset>
       <legend>Obsah</legend>
       <label class="check"><input type="checkbox" name="iss" checked> Přelety ISS</label>
-      <label class="check"><input type="checkbox" name="events" checked> Kalendář úkazů</label>
-      <label class="check"><input type="checkbox" name="rockets"> Starty raket (Launch Library 2)</label>
-      <label class="check"><input type="checkbox" name="weather" checked> Oblačnost na noc (Open-Meteo)</label>
+      <label class="check"><input type="checkbox" name="events" checked> Kalendář úkazů <a class="src" href="https://www.jantichy.cz/ukazy" target="_blank" rel="noopener">jantichy.cz/ukazy</a></label>
+      <label class="check"><input type="checkbox" name="rockets"> Starty raket <a class="src" href="https://thespacedevs.com/llapi" target="_blank" rel="noopener">Launch Library 2</a></label>
+      <label class="check"><input type="checkbox" name="weather" checked> Oblačnost na noc <a class="src" href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></label>
       <label class="check"><input type="checkbox" name="ecliptic" checked> Ekliptika (tečkovaně)</label>
       <div class="seg">
         <label><input type="radio" name="lang" value="cs" checked><span>Česky</span></label>

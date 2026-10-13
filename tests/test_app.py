@@ -82,3 +82,4 @@ def test_configurator_page():
     assert "/sky." in r.text
     assert 'name="token"' not in r.text and 'name="base"' not in r.text   # veřejné rozhraní bez tokenu a adresy služby
     assert ">Spectra6<" in r.text and ">BWRY<" in r.text
+    assert 'href="https://www.jantichy.cz/ukazy"' in r.text     # atribuce zdroje úkazů
