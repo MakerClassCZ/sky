@@ -333,11 +333,11 @@ def _draw_sky(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: IssI
     _draw_bodies(ctx, placed, inside_circle, project, visible, model, iss_info, params)
     _draw_track(ctx, placed, iss_info, params, project, clip, lambda z0, z1: False, ox, oy, model, inside_circle)
     if m.w >= LABEL_MIN_MAP:
-        _draw_star_names(ctx, placed, inside_circle, project, visible, model)
         for text, alt, az in model.labels:
             if alt >= LABEL_MIN_ALT:
                 x, y = project(alt, az)
                 _place_label(ctx, placed, x, y, text, inside_circle)
+        _draw_star_names(ctx, placed, inside_circle, project, visible, model)   # až po souhvězdích: mají přednost
     ctx.d.ellipse((cx - R + ox, cy - R + oy, cx + R + ox, cy + R + oy), outline=ctx.pal["horizon"], width=1)
 
     font = ctx.mid if m.w >= 300 else ctx.small
@@ -379,11 +379,11 @@ def _draw_horizon(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: 
     _draw_bodies(ctx, placed, inside_rect, project, proj.visible, model, iss_info, params)
     _draw_track(ctx, placed, iss_info, params, project, clip, proj.segment_wraps, ox, oy, model, inside_rect)
     if mh >= LABEL_MIN_MAP // 2:
-        _draw_star_names(ctx, placed, inside_rect, project, proj.visible, model)
         for text, alt, az in model.labels:
             if alt >= LABEL_MIN_ALT and proj.visible(alt, az):
                 x, y = project(alt, az)
                 _place_label(ctx, placed, x, y, text, inside_rect)
+        _draw_star_names(ctx, placed, inside_rect, project, proj.visible, model)
 
     hy = oy + mh - 1
     ctx.d.line((ox, hy, ox + m.w - 1, hy), fill=ctx.pal["horizon"], width=1)
