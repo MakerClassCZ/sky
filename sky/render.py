@@ -41,7 +41,6 @@ class Ctx:
     small: BdfFont
     mid: BdfFont
     big: BdfFont
-    halo: int | None = None     # index barvy obrysu popisků (pozadí), None = bez obrysu
 
 
 def render(params: Params, model: SkyModel, iss_info: IssInfo, events: list[Event] | None,
@@ -50,8 +49,7 @@ def render(params: Params, model: SkyModel, iss_info: IssInfo, events: list[Even
     img = Image.new("P", (params.w, params.h), pal["bg"])
     img.putpalette(pal.flat())
     ctx = Ctx(img, ImageDraw.Draw(img), pal, params.lang,
-              load_font("8x16"), load_font("12x24"), load_font("16x32"),
-              halo=pal["bg"] if params.halo else None)
+              load_font("8x16"), load_font("12x24"), load_font("16x32"))
     show_events = params.events or params.rockets
     sections = tuple(s for s in layout.ALL_SECTIONS
                      if (s != "iss" or params.iss) and (s != "events" or show_events))
@@ -183,16 +181,15 @@ def choose_box(placed: list[Box], w: int, h: int, candidates, bounds) -> Box | N
 
 
 def _label(ctx: Ctx, placed: list[Box], text: str, idx: int, candidates, bounds) -> None:
-    pad = 1 if ctx.halo is not None else 0          # obrys zabírá o pixel víc na každou stranu
-    w, h = text_width(ctx.small, text) + 2 * pad, ctx.small.height + 2 * pad
-    box = choose_box(placed, w, h, [(x - pad, y - pad) for x, y in candidates], bounds)
+    """Popisek s 1px obrysem v barvě pozadí (čitelný přes čáry).
+
+    Kolize se počítají z boxu písma (obrys smí o pixel zasáhnout souseda), hranice z boxu i s obrysem."""
+    box = choose_box(placed, text_width(ctx.small, text), ctx.small.height, candidates,
+                     lambda b: bounds((b[0] - 1, b[1] - 1, b[2] + 1, b[3] + 1)))
     if box is None:
         return
     placed.append(box)
-    if ctx.halo is None:
-        draw_text(ctx.img, (box[0], box[1]), text, ctx.small, idx)
-    else:
-        draw_text_halo(ctx.img, (box[0] + pad, box[1] + pad), text, ctx.small, idx, ctx.halo)
+    draw_text_halo(ctx.img, (box[0], box[1]), text, ctx.small, idx, ctx.pal["bg"])
 
 
 def _place_label(ctx: Ctx, placed: list[Box], x: float, y: float, text: str, bounds) -> None:

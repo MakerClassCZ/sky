@@ -241,7 +241,6 @@
         <label class="check" style="grid-column:1/-1"><input type="checkbox" name="ecliptic" checked> Ekliptika (tečkovaně)</label>
         <label class="check" style="grid-column:1/-1"><input type="checkbox" name="equator"> Nebeský rovník (čárkovaně)</label>
         <label class="check" style="grid-column:1/-1"><input type="checkbox" name="constnames" checked> Názvy souhvězdí</label>
-        <label class="check" style="grid-column:1/-1"><input type="checkbox" name="halo"> Obrys kolem popisků (čitelnější přes čáry)</label>
         <label class="check" style="grid-column:1/-1"><input type="checkbox" name="sunmoon"> Popisky Slunce a Měsíce</label>
         <label class="check" style="grid-column:1/-1"><input type="checkbox" name="starnames"> Jména hvězd do
           <select name="starmag" class="inline"><option value="1.5">1,5</option><option value="2.0">2,0</option><option value="2.5" selected>2,5</option><option value="3.0">3,0</option></select> mag</label>
@@ -351,7 +350,6 @@
     if (q('equator').checked) p.set('equator', '1');
     if (val('comets') !== '6') p.set('comets', val('comets'));
     if (!q('constnames').checked) p.set('constnames', '0');
-    if (q('halo').checked) p.set('halo', '1');
     if (q('sunmoon').checked) p.set('sunmoon', '1');
     if (q('starnames').checked) p.set('starnames', val('starmag'));
     const tm = val('tmode');

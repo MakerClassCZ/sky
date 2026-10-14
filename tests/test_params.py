@@ -112,8 +112,3 @@ def test_comets_limit():
 def test_equator_flag():
     assert parse({}, CFG_LOC, "png").equator is False
     assert parse({"equator": "1"}, CFG_LOC, "png").equator is True
-
-
-def test_halo_flag():
-    assert parse({}, CFG_LOC, "png").halo is False
-    assert parse({"halo": "1"}, CFG_LOC, "png").halo is True

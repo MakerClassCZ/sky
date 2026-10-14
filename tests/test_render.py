@@ -346,7 +346,13 @@ def test_equator_drawn_when_enabled():
     assert a.tobytes() != b.tobytes()
 
 
-def test_halo_outlines_labels():
-    a = render(_params(iss=0, events=0), fake_model(), ISS, None)
-    b = render(_params(iss=0, events=0, halo=1), fake_model(), ISS, None)
-    assert a.tobytes() != b.tobytes()
+def test_labels_have_background_halo():
+    # popisek „Orion“ (alt 15, az 150) leží v mapě; v jeho okolí musí být kolem písma jen pozadí nebo písmo
+    img = render(_params(iss=0, events=0, view="horizon"), fake_model(), ISS, None)
+    px = img.load()
+    bg, fg = 1, 0
+    inked = [(x, y) for x in range(1, 799) for y in range(1, 300) if px[x, y] == fg]
+    assert inked
+    # žádný pixel písma popisku není přímo vedle čáry: test hrubý – aspoň 95 % okolí písmen je pozadí nebo písmo
+    ok = sum(all(px[x + dx, y + dy] in (bg, fg) for dx in (-1, 0, 1) for dy in (-1, 0, 1)) for x, y in inked)
+    assert ok / len(inked) > 0.95
