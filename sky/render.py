@@ -333,7 +333,7 @@ def _draw_sky(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: IssI
     _draw_bodies(ctx, placed, inside_circle, project, visible, model, iss_info, params)
     _draw_track(ctx, placed, iss_info, params, project, clip, lambda z0, z1: False, ox, oy, model, inside_circle)
     if m.w >= LABEL_MIN_MAP:
-        for text, alt, az in model.labels:
+        for text, alt, az in (model.labels if params.constnames else []):
             if alt >= LABEL_MIN_ALT:
                 x, y = project(alt, az)
                 _place_label(ctx, placed, x, y, text, inside_circle)
@@ -379,7 +379,7 @@ def _draw_horizon(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: 
     _draw_bodies(ctx, placed, inside_rect, project, proj.visible, model, iss_info, params)
     _draw_track(ctx, placed, iss_info, params, project, clip, proj.segment_wraps, ox, oy, model, inside_rect)
     if mh >= LABEL_MIN_MAP // 2:
-        for text, alt, az in model.labels:
+        for text, alt, az in (model.labels if params.constnames else []):
             if alt >= LABEL_MIN_ALT and proj.visible(alt, az):
                 x, y = project(alt, az)
                 _place_label(ctx, placed, x, y, text, inside_rect)

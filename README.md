@@ -50,6 +50,7 @@ GET /health
 | `mode` | `auto` \| `night` \| `day` | režim podle Slunce, nebo vynucený tmavý / světlý | `auto` |
 | `weather` | 0 \| 1 | oblačnost na noc v sekci Slunce (Open-Meteo) | `1` |
 | `ecliptic` | 0 \| 1 | tečkovaná ekliptika (u `spectra` modrá) | `1` |
+| `constnames` | 0 \| 1 | názvy souhvězdí na mapě | `1` |
 | `sunmoon` | 0 \| 1 | popisky „Slunce“ a „Měsíc“ u jejich symbolů na mapě | `0` |
 | `starnames` | −2..4,5 | jména jasných hvězd do této magnitudy (např. `2.5` ≈ 90 hvězd na celé obloze, Vega, Arktur, Polárka…); bez parametru vypnuto | – |
 | `iss`, `events` | 0 \| 1 | vypnutí sekce ISS / úkazů | `1` |
@@ -140,7 +141,7 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
 
 ## Co je na obrázku
 
-- **Mapa**: hvězdy do 4,5 mag (velikost podle jasnosti), čáry a názvy souhvězdí,
+- **Mapa**: hvězdy do 4,5 mag (velikost podle jasnosti), čáry a názvy souhvězdí (`constnames=0` je skryje),
   volitelně jména jasných hvězd (`starnames`) a popisky Slunce a Měsíce (`sunmoon`),
   Merkur až Neptun (Uran a Neptun prázdným kroužkem, jsou jen pro dalekohled),
   Měsíc s fází natočenou ke Slunci, Slunce je-li nad obzorem, tečkovaná ekliptika,

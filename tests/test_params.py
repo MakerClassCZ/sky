@@ -93,3 +93,8 @@ def test_sunmoon_and_starnames():
     assert parse({"starnames": ""}, CFG_LOC, "png").starnames is None
     with pytest.raises(ParamError):
         parse({"starnames": "9"}, CFG_LOC, "png")
+
+
+def test_constnames_flag():
+    assert parse({}, CFG_LOC, "png").constnames is True
+    assert parse({"constnames": "0"}, CFG_LOC, "png").constnames is False

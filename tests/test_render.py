@@ -301,3 +301,12 @@ def test_star_names_drawn_when_model_has_them():
     a = render(_params(iss=0, events=0), m, ISS, None)
     b = render(_params(iss=0, events=0), named, ISS, None)
     assert a.tobytes() != b.tobytes()
+
+
+def test_constellation_names_can_be_hidden():
+    a = render(_params(iss=0, events=0), fake_model(), ISS, None)
+    b = render(_params(iss=0, events=0, constnames=0), fake_model(), ISS, None)
+    assert a.tobytes() != b.tobytes()
+    c = render(_params(iss=0, events=0, constnames=0, view="horizon"), fake_model(), ISS, None)
+    d = render(_params(iss=0, events=0, view="horizon"), fake_model(), ISS, None)
+    assert c.tobytes() != d.tobytes()
