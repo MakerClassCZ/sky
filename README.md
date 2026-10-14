@@ -51,6 +51,7 @@ GET /health
 | `weather` | 0 \| 1 | oblačnost na noc v sekci Slunce (Open-Meteo): průměr, převládající vrstva (vysoké cirry jasné objekty propustí, nízká a mlha ne) a hodina s nejmenší nízkou oblačností | `1` |
 | `ecliptic` | 0 \| 1 | tečkovaná ekliptika (u `spectra` modrá) | `1` |
 | `constnames` | 0 \| 1 | názvy souhvězdí na mapě | `1` |
+| `comets` | 0 \| −5..15 | komety s odhadovanou jasností do této magnitudy (6 = pouhé oko, 8 = triedr, 10 = malý dalekohled); `0` vypne | `6` |
 | `sunmoon` | 0 \| 1 | popisky „Slunce“ a „Měsíc“ u jejich symbolů na mapě | `0` |
 | `starnames` | −2..4,5 | jména jasných hvězd do této magnitudy (např. `2.5` ≈ 90 hvězd na celé obloze, Vega, Arktur, Polárka…); bez parametru vypnuto | – |
 | `iss`, `events` | 0 \| 1 | vypnutí sekce ISS / úkazů | `1` |
@@ -93,6 +94,7 @@ python -m sky warmup
 | `SKY_TLE_URL` | zdroj TLE pro ISS | Celestrak, NORAD 25544 |
 | `SKY_ROCKETS_URL` | JSON nadcházejících startů (Launch Library 2) | `ll.thespacedevs.com/2.2.0/launch/upcoming/` |
 | `SKY_WEATHER_URL` | základ URL předpovědi (Open-Meteo forecast API) | `api.open-meteo.com/v1/forecast` |
+| `SKY_COMETS_URL` | dráhové elementy komet (MPC, pevný formát CometEls.txt) | `minorplanetcenter.net/iau/MPCORB/CometEls.txt` |
 | `SKY_RENDER_CACHE_S` | TTL cache hotových obrázků v sekundách | `300` |
 | `SKY_EVENT_TYPES` | typy úkazů k zobrazení: `eye,scope,warn,moon,none,info` | `eye,scope,warn,moon` |
 | `SKY_RATE_LIMIT` | nejvýš tolik požadavků na `/sky.*` za minutu z jedné IP (429 při překročení); `0` vypne | `60` |
@@ -146,7 +148,8 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
   Merkur až Neptun (Uran a Neptun prázdným kroužkem, jsou jen pro dalekohled),
   Měsíc s fází natočenou ke Slunci, Slunce je-li nad obzorem, tečkovaná ekliptika,
   ISS je-li nad obzorem a hodinu před viditelným přeletem jeho čárkovaná dráha
-  s časem začátku a konce. `sky` je azimutální mapa (obzor = kružnice, světové strany kolem),
+  s časem začátku a konce, komety jasnější než `comets` mag (jádro s ohonem od Slunce a jménem;
+  odhad jasnosti z dráhových elementů bývá přesný jen na 1–2 mag). `sky` je azimutální mapa (obzor = kružnice, světové strany kolem),
   `horizon` je panorama azimut × výška s obzorem dole.
 - **Infopanel**: datum a čas, Slunce (východ, západ, kdy začíná noc / svítá, oblačnost na noc
   s převládající vrstvou: nízká / střední / vysoká / mlha a nejlepší hodinou podle nízké oblačnosti),
@@ -167,6 +170,9 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
   zdarma do ~10 000 požadavků denně). Souřadnice se zaokrouhlují na 0,05° a předpověď se
   cachuje hodinu, takže i veřejná instance s mnoha panely dělá jen desítky dotazů za hodinu.
   Pro komerční provoz je potřeba jejich placený tarif. Weather data by Open-Meteo.com.
+- Komety: [Minor Planet Center](https://www.minorplanetcenter.net/iau/MPCORB/CometEls.txt)
+  (dráhové elementy všech sledovaných komet, bez klíče, cache 24 h); poloha přes Skyfield,
+  jasnost odhadem m = H + 5·log Δ + 2,5·G·log r.
 - Starty raket: [Launch Library 2](https://thespacedevs.com/llapi) (The Space Devs), bez klíče,
   anonymně 15 dotazů za hodinu; služba se ptá nejvýš jednou za 6 hodin. Proběhlé starty a
   starty bez potvrzeného data se nezobrazují.

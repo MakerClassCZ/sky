@@ -46,6 +46,7 @@ class Params:
     ecliptic: bool = True
     sunmoon: bool = False           # popisky Slunce a Měsíce na mapě
     constnames: bool = True         # názvy souhvězdí na mapě
+    comets: float | None = 6.0      # komety do této magnitudy; None = vypnuto (comets=0|off)
     starnames: float | None = None  # jména hvězd do této magnitudy; None = vypnuto
 
 
@@ -102,6 +103,13 @@ def parse_time(raw: str) -> datetime:
     return dt
 
 
+def _comets(q) -> float | None:
+    raw = (q.get("comets") or "").strip().lower()
+    if raw in ("0", "off", "none", "no"):
+        return None
+    return _num(q, "comets", 6.0, -5.0, 15.0, float)
+
+
 def parse(q: Mapping[str, str], cfg: Config, fmt: str = "png") -> Params:
     if fmt not in FORMATS:
         raise ParamError("formát: povolené png, bmp")
@@ -133,5 +141,6 @@ def parse(q: Mapping[str, str], cfg: Config, fmt: str = "png") -> Params:
         ecliptic=_flag(q, "ecliptic", True),
         sunmoon=_flag(q, "sunmoon", False),
         constnames=_flag(q, "constnames", True),
+        comets=_comets(q),
         starnames=_num(q, "starnames", None, -2.0, 4.5, float) if q.get("starnames") else None,
     )

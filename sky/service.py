@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
-from sky import astro, events, iss, output, render, rockets, weather
+from sky import astro, comets, events, iss, output, render, rockets, weather
 from sky.catalog import load_catalog
 from sky.config import Config
 from sky.geo import tz_for
@@ -50,6 +50,8 @@ def build(params: Params, cfg: Config, now: datetime | None = None) -> Result:
         raise EphemerisMissing(f"chybí efemerida {astro.EPHEMERIS}; spusť `python -m sky warmup`")
     t0 = time.perf_counter()
     model = astro.compute(params, eph, load_catalog(), params.lang, t)
+    if params.comets is not None:
+        model = replace(model, comets=comets.tonight(cfg, eph, params.lat, params.lon, t, params.comets))
     if params.iss:
         iss_info = iss.compute(params, eph, iss.load_tle(cfg), t)
     else:

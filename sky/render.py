@@ -150,6 +150,16 @@ def _sun(ctx: Ctx, x: float, y: float, r: int = 7) -> None:
     ctx.d.ellipse((x - r, y - r, x + r, y + r), fill=ctx.pal["sun"], outline=ctx.pal["fg"])
 
 
+def _comet(ctx: Ctx, x: float, y: float, away: tuple[float, float]) -> None:
+    """Jádro s vějířem tří čar ohonu směrem od Slunce (`away` = jednotkový směr v obraze)."""
+    c = ctx.pal["planet"]
+    ctx.d.ellipse((x - 2, y - 2, x + 2, y + 2), fill=c)
+    base = math.atan2(away[1], away[0])
+    for da in (-0.35, 0.0, 0.35):
+        a = base + da
+        ctx.d.line((x + 3 * math.cos(a), y + 3 * math.sin(a), x + 12 * math.cos(a), y + 12 * math.sin(a)), fill=c)
+
+
 def _iss_marker(ctx: Ctx, x: float, y: float) -> None:
     c = ctx.pal["iss"]
     ctx.d.line((x - 4, y, x + 4, y), fill=c)
@@ -224,6 +234,14 @@ def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
         x, y = project(iss_info.alt, iss_info.az)
         _iss_marker(ctx, x, y)
         _body_label(ctx, placed, x, y, "ISS", ctx.pal["iss"], bounds)
+    for c in model.comets:
+        if visible(c.alt, c.az):
+            x, y = project(c.alt, c.az)
+            toward = project(*step_toward(c.alt, c.az, model.sun.alt, model.sun.az, 2.0))
+            ux, uy = moon_lit_direction((x, y), toward)
+            _comet(ctx, x, y, (-ux, -uy))
+            placed.append((int(x) - 4, int(y) - 4, int(x) + 5, int(y) + 5))
+            _body_label(ctx, placed, x, y, c.name, ctx.pal["label"], bounds, gap=8)
 
 
 def _draw_star_names(ctx: Ctx, placed: list[Box], bounds, project, visible, model: SkyModel) -> None:

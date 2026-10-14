@@ -97,6 +97,7 @@ class SkyModel:
     moon: MoonInfo
     ecliptic: np.ndarray = None                         # (n, 2): alt, az podél ekliptiky
     star_names: list[tuple[str, float, float, float]] = field(default_factory=list)   # text, alt, az, mag
+    comets: list = field(default_factory=list)          # CometPos (doplňuje service podle params.comets)
 
 
 def first_or_none(times, oks) -> datetime | None:

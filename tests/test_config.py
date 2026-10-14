@@ -33,3 +33,8 @@ def test_rockets_url_default_and_override():
 def test_rate_limit_default():
     assert config.load({}).rate_limit == 60
     assert config.load({"SKY_RATE_LIMIT": "0"}).rate_limit == 0
+
+
+def test_comets_url():
+    assert "minorplanetcenter" in config.load({}).comets_url
+    assert config.load({"SKY_COMETS_URL": "http://x/c.txt"}).comets_url == "http://x/c.txt"

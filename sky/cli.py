@@ -10,7 +10,7 @@ from sky import config, service
 from sky.params import ParamError, parse
 
 QUERY_KEYS = ("lat", "lon", "view", "az", "fov", "w", "h", "colors", "rot", "t", "lang", "lines", "mode",
-              "starnames")
+              "starnames", "comets")
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -213,6 +213,9 @@
       <label class="check"><input type="checkbox" name="events" checked> Kalendář úkazů <a class="src" href="https://www.jantichy.cz/ukazy" target="_blank" rel="noopener">jantichy.cz/ukazy</a></label>
       <label class="check"><input type="checkbox" name="rockets"> Starty raket <a class="src" href="https://thespacedevs.com/llapi" target="_blank" rel="noopener">Launch Library 2</a></label>
       <label class="check"><input type="checkbox" name="weather" checked> Oblačnost na noc <a class="src" href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></label>
+      <label class="check">Komety do
+        <select name="comets" class="inline"><option value="0">vypnuto</option><option value="6" selected>6 mag (oko)</option><option value="8">8 mag (triedr)</option><option value="10">10 mag (dalekohled)</option></select>
+        <a class="src" href="https://www.minorplanetcenter.net/" target="_blank" rel="noopener">MPC</a></label>
     </section>
 
     <section class="block">
@@ -343,6 +346,7 @@
     if (q('rockets').checked) p.set('rockets', '1');
     if (!q('weather').checked) p.set('weather', '0');
     if (!q('ecliptic').checked) p.set('ecliptic', '0');
+    if (val('comets') !== '6') p.set('comets', val('comets'));
     if (!q('constnames').checked) p.set('constnames', '0');
     if (q('sunmoon').checked) p.set('sunmoon', '1');
     if (q('starnames').checked) p.set('starnames', val('starmag'));

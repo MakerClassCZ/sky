@@ -310,3 +310,13 @@ def test_constellation_names_can_be_hidden():
     c = render(_params(iss=0, events=0, constnames=0, view="horizon"), fake_model(), ISS, None)
     d = render(_params(iss=0, events=0, view="horizon"), fake_model(), ISS, None)
     assert c.tobytes() != d.tobytes()
+
+
+def test_comet_drawn_with_tail_away_from_sun():
+    from sky.comets import CometPos
+    m = fake_model()
+    with_comet = SkyModel(m.t, m.tz, m.lat, m.lon, m.mode, m.stars, m.lines, m.labels, m.planets, m.sun, m.moon,
+                          m.ecliptic, [], [CometPos("Lemmon", 45.0, 90.0, 4.2)])
+    a = render(_params(iss=0, events=0), m, ISS, None)
+    b = render(_params(iss=0, events=0), with_comet, ISS, None)
+    assert a.tobytes() != b.tobytes()

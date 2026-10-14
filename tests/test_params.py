@@ -98,3 +98,12 @@ def test_sunmoon_and_starnames():
 def test_constnames_flag():
     assert parse({}, CFG_LOC, "png").constnames is True
     assert parse({"constnames": "0"}, CFG_LOC, "png").constnames is False
+
+
+def test_comets_limit():
+    assert parse({}, CFG_LOC, "png").comets == 6.0
+    assert parse({"comets": "8"}, CFG_LOC, "png").comets == 8.0
+    assert parse({"comets": "0"}, CFG_LOC, "png").comets is None
+    assert parse({"comets": "off"}, CFG_LOC, "png").comets is None
+    with pytest.raises(ParamError):
+        parse({"comets": "20"}, CFG_LOC, "png")
