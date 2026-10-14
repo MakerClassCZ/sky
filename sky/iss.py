@@ -26,15 +26,6 @@ def track_points(sat, topos, ts, p: Pass) -> tuple[tuple[float, float], ...]:
     times = ts.from_datetimes([p.start + timedelta(seconds=i * TRACK_STEP_S) for i in range(n)])
     alt, az, _ = (sat - topos).at(times).altaz()
     return tuple((float(a), float(z)) for a, z in zip(alt.degrees, az.degrees))
-TRACK_WITHIN = timedelta(minutes=60)   # dráha se kreslí, když přelet začne do hodiny (nebo probíhá)
-TRACK_STEP_S = 20
-
-
-def track_points(sat, topos, ts, p: Pass) -> tuple[tuple[float, float], ...]:
-    n = max(2, int((p.end - p.start).total_seconds() // TRACK_STEP_S) + 1)
-    times = ts.from_datetimes([p.start + timedelta(seconds=i * TRACK_STEP_S) for i in range(n)])
-    alt, az, _ = (sat - topos).at(times).altaz()
-    return tuple((float(a), float(z)) for a, z in zip(alt.degrees, az.degrees))
 
 
 @dataclass(frozen=True)

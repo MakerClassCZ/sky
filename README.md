@@ -48,7 +48,7 @@ GET /health
 | `rot` | 0 \| 90 \| 180 \| 270 | otočení hotového obrázku po směru hodin | `0` |
 | `t` | ISO 8601 nebo `HH:MM` | čas vykreslení; bez zóny = UTC; roky 1900–2050 (rozsah efemeridy). `HH:MM` = dnes v tento místní čas stanoviště (např. `t=22:00`: panel přes den ukazuje dnešní večerní oblohu) | teď |
 | `mode` | `auto` \| `night` \| `day` | režim podle Slunce, nebo vynucený tmavý / světlý | `auto` |
-| `weather` | 0 \| 1 | oblačnost na noc v sekci Slunce (Open-Meteo) | `1` |
+| `weather` | 0 \| 1 | oblačnost na noc v sekci Slunce (Open-Meteo): průměr, převládající vrstva (vysoké cirry jasné objekty propustí, nízká a mlha ne) a hodina s nejmenší nízkou oblačností | `1` |
 | `ecliptic` | 0 \| 1 | tečkovaná ekliptika (u `spectra` modrá) | `1` |
 | `constnames` | 0 \| 1 | názvy souhvězdí na mapě | `1` |
 | `sunmoon` | 0 \| 1 | popisky „Slunce“ a „Měsíc“ u jejich symbolů na mapě | `0` |
@@ -148,7 +148,8 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
   ISS je-li nad obzorem a hodinu před viditelným přeletem jeho čárkovaná dráha
   s časem začátku a konce. `sky` je azimutální mapa (obzor = kružnice, světové strany kolem),
   `horizon` je panorama azimut × výška s obzorem dole.
-- **Infopanel**: datum a čas, Slunce (východ, západ, kdy začíná noc / svítá, oblačnost na noc),
+- **Infopanel**: datum a čas, Slunce (východ, západ, kdy začíná noc / svítá, oblačnost na noc
+  s převládající vrstvou: nízká / střední / vysoká / mlha a nejlepší hodinou podle nízké oblačnosti),
   Měsíc (východ, západ, fáze), ISS (nejbližší viditelný přelet do 48 h: nad 10°,
   osvětlená, za občanského soumraku), úkazy (dalších 12 z kalendáře, dnešní
   zvýrazněný; volitelně i starty raket s časem). U `horizon` dostane infopanel

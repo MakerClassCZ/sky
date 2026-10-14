@@ -1,7 +1,9 @@
 """Oblačnost na noc z Open-Meteo (bez klíče, nekomerční použití, CC BY 4.0).
 
 Souřadnice se zaokrouhlují na 0,05° (~5 km) a předpověď se cachuje hodinu, aby
-veřejná instance s mnoha panely nedělala zbytečné dotazy.
+veřejná instance s mnoha panely nedělala zbytečné dotazy. Vedle celkové oblačnosti
+se bere i nízká / střední / vysoká vrstva a dohlednost: pro pozorování rozhoduje
+nízká oblačnost a mlha, řídké vysoké cirry jasné objekty propustí.
 """
 from __future__ import annotations
 
@@ -17,13 +19,18 @@ from sky.netcache import fetch_text
 
 log = logging.getLogger(__name__)
 WEATHER_MAX_AGE_S = 3600
+HOURLY = "cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility"
+CLEAR_BELOW = 20        # pod tolik % průměru se vrstva neuvádí
+LOW_DECIDES = 50        # nízká oblačnost nad tolik % rozhoduje bez ohledu na ostatní
+FOG_VIS_M = 1000        # dohlednost pod 1 km = mlha
 
 
 @dataclass(frozen=True)
 class CloudInfo:
-    mean: int           # průměrná oblačnost v noci v %
-    best: int           # nejnižší hodinová oblačnost v %
-    best_at: datetime   # kdy (UTC, celá hodina)
+    mean: int           # průměrná celková oblačnost v noci v %
+    best: int           # celková oblačnost v nejlepší hodině v %
+    best_at: datetime   # nejlepší hodina (UTC) podle „efektivní“ oblačnosti (nízká + střední + ½ vysoké)
+    layer: str = ""     # "" | "low" | "mid" | "high" | "fog" – převládající vrstva za noc
 
 
 def cache_key(lat: float, lon: float) -> str:
@@ -32,37 +39,69 @@ def cache_key(lat: float, lon: float) -> str:
 
 def build_url(cfg: Config, lat: float, lon: float) -> str:
     la, lo = round(lat * 20) / 20, round(lon * 20) / 20
-    return f"{cfg.weather_url}?latitude={la:g}&longitude={lo:g}&hourly=cloud_cover&forecast_days=2&timezone=UTC"
+    return f"{cfg.weather_url}?latitude={la:g}&longitude={lo:g}&hourly={HOURLY}&forecast_days=2&timezone=UTC"
+
+
+def _series(hourly: dict, key: str, n: int) -> list | None:
+    vals = hourly.get(key)
+    return vals if isinstance(vals, list) and len(vals) == n else None
 
 
 def night_cloud(text: str, start: datetime, end: datetime) -> CloudInfo | None:
-    """Průměr a minimum oblačnosti v hodinách mezi `start` a `end` (UTC)."""
+    """Souhrn oblačnosti v hodinách mezi `start` a `end` (UTC)."""
     try:
-        data = json.loads(text)
-        times = data["hourly"]["time"]
-        cover = data["hourly"]["cloud_cover"]
+        hourly = json.loads(text)["hourly"]
+        times = hourly["time"]
+        cover = hourly["cloud_cover"]
     except (ValueError, KeyError, TypeError):
         return None
-    hours: list[tuple[datetime, int]] = []
-    for ts, c in zip(times, cover):
+    n = len(times)
+    low, mid, high, vis = (_series(hourly, k, n) for k in ("cloud_cover_low", "cloud_cover_mid",
+                                                           "cloud_cover_high", "visibility"))
+    layers = low is not None and mid is not None and high is not None
+    rows = []       # (čas, celkem, efektivní, nízká, střední, vysoká, mlha?)
+    for i, (ts, c) in enumerate(zip(times, cover)):
         if c is None:
             continue
         try:
             dt = datetime.fromisoformat(ts).replace(tzinfo=timezone.utc)
         except ValueError:
             continue
-        if start <= dt <= end:
-            hours.append((dt, int(c)))
-    if not hours:
+        if not (start <= dt <= end):
+            continue
+        if layers and None not in (low[i], mid[i], high[i]):
+            lo, mi, hi = int(low[i]), int(mid[i]), int(high[i])
+            eff = min(100, lo + mi + hi // 2)
+        else:
+            lo = mi = hi = 0
+            eff = int(c)
+        fog = vis is not None and vis[i] is not None and float(vis[i]) < FOG_VIS_M
+        rows.append((dt, int(c), eff, lo, mi, hi, fog))
+    if not rows:
         return None
-    best_at, best = min(hours, key=lambda h: (h[1], h[0]))
-    return CloudInfo(round(sum(c for _, c in hours) / len(hours)), best, best_at)
+    best_at, best = min(((r[0], r[1]) for r in rows), key=lambda h: (next(r[2] for r in rows if r[0] == h[0]), h[0]))
+    mean = round(sum(r[1] for r in rows) / len(rows))
+    layer = ""
+    if sum(r[6] for r in rows) * 2 > len(rows):
+        layer = "fog"
+    elif layers and mean >= CLEAR_BELOW:
+        means = {k: sum(r[j] for r in rows) / len(rows) for k, j in (("low", 3), ("mid", 4), ("high", 5))}
+        layer = "low" if means["low"] >= LOW_DECIDES else max(means, key=lambda k: (means[k], k == "low"))
+    return CloudInfo(mean, best, best_at, layer)
 
 
 def line(lang: str, tz: ZoneInfo, info: CloudInfo, max_chars: int) -> str:
-    full = f"{tr(lang, 'clouds')} {info.mean} %, min {info.best} % {tr(lang, 'at')} {info.best_at.astimezone(tz).strftime('%H:%M')}"
-    short = f"{tr(lang, 'clouds')} {info.mean} %"
-    return full if len(full) <= max_chars else short
+    """Nejdelší varianta, která se vejde: s vrstvou a minimem, s vrstvou, zkráceně s vrstvou, bez vrstvy, zkráceně."""
+    layer = f" {tr(lang, 'layer_' + info.layer)}" if info.layer else ""
+    when = f"min {info.best} % {tr(lang, 'at')} {info.best_at.astimezone(tz).strftime('%H:%M')}"
+    variants = [
+        f"{tr(lang, 'clouds')} {info.mean} %{layer}, {when}",
+        f"{tr(lang, 'clouds')} {info.mean} %{layer}",
+        f"{tr(lang, 'clouds_short')} {info.mean} %{layer}",
+        f"{tr(lang, 'clouds')} {info.mean} %",
+        f"{tr(lang, 'clouds_short')} {info.mean} %",
+    ]
+    return next((v for v in variants if len(v) <= max_chars), variants[-1])
 
 
 def tonight(cfg: Config, lat: float, lon: float, start: datetime, end: datetime) -> CloudInfo | None:
