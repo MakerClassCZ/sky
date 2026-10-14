@@ -26,6 +26,7 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--no-weather", action="store_true")
     r.add_argument("--no-ecliptic", action="store_true")
     r.add_argument("--equator", action="store_true", help="nebeský rovník (čárkovaně)")
+    r.add_argument("--halo", action="store_true", help="obrys kolem popisků na mapě")
     r.add_argument("--sunmoon", action="store_true", help="popisky Slunce a Měsíce na mapě")
     r.add_argument("--no-constnames", action="store_true", help="bez názvů souhvězdí")
     r.add_argument("--out", required=True)
@@ -66,6 +67,8 @@ def main(argv=None) -> int:
         q["ecliptic"] = "0"
     if a.equator:
         q["equator"] = "1"
+    if a.halo:
+        q["halo"] = "1"
     if a.sunmoon:
         q["sunmoon"] = "1"
     if a.no_constnames:

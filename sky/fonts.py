@@ -77,6 +77,16 @@ def text_width(font: BdfFont, text: str) -> int:
     return len(text) * font.width
 
 
+def draw_text_halo(img, xy, text: str, font: BdfFont, idx: int, halo_idx: int) -> int:
+    """Text s jednopixelovým obrysem v barvě `halo_idx` (pro čitelnost přes čáry mapy)."""
+    x, y = xy
+    for dx in (-1, 0, 1):
+        for dy in (-1, 0, 1):
+            if dx or dy:
+                draw_text(img, (x + dx, y + dy), text, font, halo_idx)
+    return draw_text(img, (x, y), text, font, idx)
+
+
 def fit(font: BdfFont, text: str, max_w: int) -> str:
     n = max_w // font.width
     if len(text) <= n:

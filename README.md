@@ -52,6 +52,7 @@ GET /health
 | `ecliptic` | 0 \| 1 | tečkovaná ekliptika (u `spectra` modrá) | `1` |
 | `equator` | 0 \| 1 | čárkovaný nebeský rovník (stejná barva jako ekliptika); lze mít obě čáry naráz | `0` |
 | `constnames` | 0 \| 1 | názvy souhvězdí na mapě | `1` |
+| `halo` | 0 \| 1 | jednopixelový obrys kolem popisků na mapě v barvě pozadí (bílý ve dne, černý v noci); popisky zůstanou čitelné i přes spojnice souhvězdí | `0` |
 | `comets` | 0 \| −5..15 | komety s odhadovanou jasností do této magnitudy (6 = pouhé oko, 8 = triedr, 10 = malý dalekohled); `0` vypne | `6` |
 | `sunmoon` | 0 \| 1 | popisky „Slunce“ a „Měsíc“ u jejich symbolů na mapě | `0` |
 | `starnames` | −2..4,5 | jména jasných hvězd do této magnitudy (např. `2.5` ≈ 90 hvězd na celé obloze, Vega, Arktur, Polárka…); bez parametru vypnuto | – |

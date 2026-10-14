@@ -42,3 +42,21 @@ def test_icons_shape_and_draw():
     img = Image.new("P", (16, 16), 0)
     draw_icon(img, (0, 0), "sun", 1)
     assert img.getpixel((7, 7)) == 1
+
+
+def test_draw_text_halo():
+    from PIL import Image
+    from sky.fonts import draw_text_halo, load_font
+    f = load_font("8x16")
+    img = Image.new("P", (40, 30), 5)
+    w = draw_text_halo(img, (10, 8), "I", f, 0, 7)
+    assert w == 8
+    px = img.load()
+    inked = [(x, y) for x in range(40) for y in range(30) if px[x, y] == 0]
+    halo = [(x, y) for x in range(40) for y in range(30) if px[x, y] == 7]
+    assert inked and halo
+    for x, y in inked:                      # každý sousední pixel kolem písma je obrys nebo písmo
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                assert px[x + dx, y + dy] in (0, 7)
+    assert px[2, 2] == 5 and px[38, 28] == 5

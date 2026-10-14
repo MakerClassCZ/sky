@@ -344,3 +344,9 @@ def test_equator_drawn_when_enabled():
     a = render(_params(iss=0, events=0, ecliptic=0), eq, ISS, None)
     b = render(_params(iss=0, events=0, ecliptic=0, equator=1), eq, ISS, None)
     assert a.tobytes() != b.tobytes()
+
+
+def test_halo_outlines_labels():
+    a = render(_params(iss=0, events=0), fake_model(), ISS, None)
+    b = render(_params(iss=0, events=0, halo=1), fake_model(), ISS, None)
+    assert a.tobytes() != b.tobytes()
