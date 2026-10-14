@@ -50,6 +50,7 @@ GET /health
 | `mode` | `auto` \| `night` \| `day` | režim podle Slunce, nebo vynucený tmavý / světlý | `auto` |
 | `weather` | 0 \| 1 | oblačnost na noc v sekci Slunce (Open-Meteo): průměr, převládající vrstva (vysoké cirry jasné objekty propustí, nízká a mlha ne) a hodina s nejmenší nízkou oblačností | `1` |
 | `ecliptic` | 0 \| 1 | tečkovaná ekliptika (u `spectra` modrá) | `1` |
+| `equator` | 0 \| 1 | čárkovaný nebeský rovník (stejná barva jako ekliptika); lze mít obě čáry naráz | `0` |
 | `constnames` | 0 \| 1 | názvy souhvězdí na mapě | `1` |
 | `comets` | 0 \| −5..15 | komety s odhadovanou jasností do této magnitudy (6 = pouhé oko, 8 = triedr, 10 = malý dalekohled); `0` vypne | `6` |
 | `sunmoon` | 0 \| 1 | popisky „Slunce“ a „Měsíc“ u jejich symbolů na mapě | `0` |
@@ -146,12 +147,14 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
 - **Mapa**: hvězdy do 4,5 mag (velikost podle jasnosti), čáry a názvy souhvězdí (`constnames=0` je skryje),
   volitelně jména jasných hvězd (`starnames`) a popisky Slunce a Měsíce (`sunmoon`),
   Merkur až Neptun (Uran a Neptun prázdným kroužkem, jsou jen pro dalekohled),
-  Měsíc s fází natočenou ke Slunci, Slunce je-li nad obzorem, tečkovaná ekliptika,
+  Měsíc s fází natočenou ke Slunci, Slunce je-li nad obzorem, tečkovaná ekliptika (volitelně
+  i čárkovaný nebeský rovník),
   ISS je-li nad obzorem a hodinu před viditelným přeletem jeho čárkovaná dráha
   s časem začátku a konce, komety jasnější než `comets` mag (jádro s ohonem od Slunce a jménem;
   odhad jasnosti z dráhových elementů bývá přesný jen na 1–2 mag). `sky` je azimutální mapa (obzor = kružnice, světové strany kolem),
   `horizon` je panorama azimut × výška s obzorem dole.
-- **Infopanel**: datum a čas, Slunce (východ, západ, kdy začíná noc / svítá, oblačnost na noc
+- **Infopanel**: datum a čas, Slunce (východ, západ, konec občanského soumraku / začátek
+  občanského svítání (−6°) a astronomická noc „Tma od–do“ (−18°, kdy je opravdu tma), oblačnost na noc
   s převládající vrstvou: nízká / střední / vysoká / mlha a nejlepší hodinou podle nízké oblačnosti),
   Měsíc (východ, západ, fáze), ISS (nejbližší viditelný přelet do 48 h: nad 10°,
   osvětlená, za občanského soumraku), úkazy (dalších 12 z kalendáře, dnešní

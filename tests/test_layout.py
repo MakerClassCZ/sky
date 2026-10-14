@@ -106,3 +106,8 @@ def test_weather_adds_line_to_sun_column():
     a = compute(800, 480, "horizon", sections=("sun", "moon"), fov=120)      # na šířku strop 90° neomezuje
     b = compute(800, 480, "horizon", sections=("sun", "moon", "weather"), fov=120)
     assert b.info.h == a.info.h + 16 and b.map.h == a.map.h - 16
+
+
+def test_sun_section_has_four_lines():
+    from sky import layout
+    assert layout.SECTION_H["sun"] == layout.U + 4 + 4 * layout.U

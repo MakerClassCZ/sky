@@ -15,7 +15,7 @@ HORIZON_BAR = 24            # pás pod obzorem pro světové strany (u `horizon`
 ALL_SECTIONS = ("sun", "moon", "iss", "events")
 SECTION_GAP = U // 2
 # výška sekce bez mezery: titulek (U + 4) + řádky; úkazy nemají pevnou výšku (plní, co zbývá)
-SECTION_H = {"sun": U + 4 + 3 * U, "moon": U + 4 + 3 * U, "iss": U + 4 + 2 * U,
+SECTION_H = {"sun": U + 4 + 4 * U, "moon": U + 4 + 3 * U, "iss": U + 4 + 2 * U,
              "events": U + 4 + 6 * U}        # úkazy: aspoň 6 řádků, víc jen když zbyde místo
 LINE_HEADER_H = 24 + MARGIN                  # jednořádková hlavička (datum 12×24, zbytek 8×16)
 

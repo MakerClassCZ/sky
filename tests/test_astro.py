@@ -91,3 +91,21 @@ def test_star_names_only_when_requested():
     m = astro.compute(p, eph, cat, "cs", t)
     assert m.star_names and all(mag <= 2.5 for _, _, _, mag in m.star_names)
     assert any(text == "Capella" for text, *_ in m.star_names)
+
+
+@ephem
+def test_twilight_times():
+    e = astro.get_ephemeris(CACHE)
+    p = parse(PLZEN, config.load({}), "png")
+    t = datetime(2026, 10, 13, 0, 0, tzinfo=timezone.utc)          # noc
+    s = astro.compute(p, e, load_catalog(), "cs", t).sun
+    assert s.dark_end < s.civil_dawn < s.next_rise                # ráno: konec tmy, občanské svítání, východ
+    assert s.next_set < s.civil_dusk < s.dark_start               # večer: západ, konec soumraku, začátek tmy
+    assert 3 <= s.dark_end.hour <= 4 and s.dark_end.date() == t.date()
+    assert (s.civil_dusk - s.next_set).total_seconds() < 3600
+
+
+def test_equator_points():
+    pts = astro.equator_radec(step_deg=15)
+    assert pts.shape == (24, 2) and abs(pts[:, 1]).max() == 0
+    assert pts[:, 0].min() >= 0 and pts[:, 0].max() < 24

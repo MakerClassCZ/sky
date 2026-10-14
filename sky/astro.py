@@ -32,6 +32,12 @@ def ecliptic_radec(step_deg: float = 5.0) -> np.ndarray:
     return np.column_stack([ra, dec])
 
 
+def equator_radec(step_deg: float = 5.0) -> np.ndarray:
+    """Body nebeského rovníku (ra_hours, dec_deg = 0) po `step_deg`."""
+    ra = np.arange(0.0, 360.0, step_deg) / 15.0
+    return np.column_stack([ra, np.zeros_like(ra)])
+
+
 class Ephemeris:
     def __init__(self, cache_dir: Path):
         self.cache_dir = Path(cache_dir)
@@ -70,6 +76,10 @@ class SunInfo:
     set: datetime | None
     next_rise: datetime | None
     next_set: datetime | None
+    civil_dusk: datetime | None = None    # příští konec občanského soumraku (Slunce −6°)
+    civil_dawn: datetime | None = None    # příští začátek občanského svítání (−6°)
+    dark_start: datetime | None = None    # příští začátek astronomické noci (−18°)
+    dark_end: datetime | None = None      # příští konec astronomické noci (−18°)
 
 
 @dataclass(frozen=True)
@@ -98,6 +108,7 @@ class SkyModel:
     ecliptic: np.ndarray = None                         # (n, 2): alt, az podél ekliptiky
     star_names: list[tuple[str, float, float, float]] = field(default_factory=list)   # text, alt, az, mag
     comets: list = field(default_factory=list)          # CometPos (doplňuje service podle params.comets)
+    equator: np.ndarray = None                          # (n, 2): alt, az podél nebeského rovníku
 
 
 def first_or_none(times, oks) -> datetime | None:
@@ -166,6 +177,9 @@ def compute(params: Params, eph: Ephemeris, catalog: Catalog, lang: str, t: date
     ecl = ecliptic_radec()
     ealt, eaz = _stars_altaz(at, ecl[:, 0], ecl[:, 1])
     ecliptic = np.column_stack([ealt, eaz])
+    eq = equator_radec()
+    qalt, qaz = _stars_altaz(at, eq[:, 0], eq[:, 1])
+    equator = np.column_stack([qalt, qaz])
 
     local0 = t.astimezone(tz).replace(hour=0, minute=0, second=0, microsecond=0)
     day0 = ts.from_datetime(local0)
@@ -178,6 +192,10 @@ def compute(params: Params, eph: Ephemeris, catalog: Catalog, lang: str, t: date
         set=first_or_none(*almanac.find_settings(observer, e["sun"], day0, day1)),
         next_rise=first_or_none(*almanac.find_risings(observer, e["sun"], tt, t48)),
         next_set=first_or_none(*almanac.find_settings(observer, e["sun"], tt, t48)),
+        civil_dusk=first_or_none(*almanac.find_settings(observer, e["sun"], tt, t48, horizon_degrees=-6.0)),
+        civil_dawn=first_or_none(*almanac.find_risings(observer, e["sun"], tt, t48, horizon_degrees=-6.0)),
+        dark_start=first_or_none(*almanac.find_settings(observer, e["sun"], tt, t48, horizon_degrees=-18.0)),
+        dark_end=first_or_none(*almanac.find_risings(observer, e["sun"], tt, t48, horizon_degrees=-18.0)),
     )
     moon = MoonInfo(
         moon_alt, moon_az,
@@ -187,4 +205,4 @@ def compute(params: Params, eph: Ephemeris, catalog: Catalog, lang: str, t: date
         set=first_or_none(*almanac.find_settings(observer, e["moon"], day0, day1)),
     )
     return SkyModel(t, tz, params.lat, params.lon, mode, stars, lines, labels, planets, sun, moon, ecliptic,
-                    star_names)
+                    star_names, [], equator)

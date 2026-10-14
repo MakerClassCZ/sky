@@ -320,3 +320,27 @@ def test_comet_drawn_with_tail_away_from_sun():
     a = render(_params(iss=0, events=0), m, ISS, None)
     b = render(_params(iss=0, events=0), with_comet, ISS, None)
     assert a.tobytes() != b.tobytes()
+
+
+def test_sun_lines_by_phase_of_night():
+    from sky.render import sun_lines
+    tz = ZoneInfo("Europe/Prague")
+    d = lambda h, m: datetime(2026, 10, 13, h, m, tzinfo=timezone.utc)
+    def sun(alt):
+        return SunInfo(alt, 180.0, d(5, 26), d(16, 17), d(5, 26), d(16, 17),
+                       civil_dusk=d(16, 50), civil_dawn=d(4, 53), dark_start=d(17, 59), dark_end=d(3, 44))
+    assert sun_lines("cs", tz, sun(30.0)) == ["Východ 07:26", "Západ  18:17", "Soumrak do 18:50", "Tma 19:59–05:44"]
+    assert sun_lines("cs", tz, sun(-10.0)) == ["Východ 07:26", "Západ  18:17", "Tma 19:59–05:44", "Svítá od 06:53"]
+    assert sun_lines("cs", tz, sun(-30.0)) == ["Východ 07:26", "Západ  18:17", "Tma do 05:44", "Svítá od 06:53"]
+    assert sun_lines("en", tz, sun(-30.0))[2:] == ["Dark until 05:44", "Dawn from 06:53"]
+    none = SunInfo(-30.0, 180.0, None, None, None, None)
+    assert sun_lines("cs", tz, none)[2:] == ["Tma do –", "Svítá od –"]
+
+
+def test_equator_drawn_when_enabled():
+    m = fake_model()
+    eq = SkyModel(m.t, m.tz, m.lat, m.lon, m.mode, m.stars, m.lines, m.labels, m.planets, m.sun, m.moon,
+                  m.ecliptic, [], [], np.array([[40.0, 120.0], [60.0, 180.0], [40.0, 240.0], [-10.0, 300.0]]))
+    a = render(_params(iss=0, events=0, ecliptic=0), eq, ISS, None)
+    b = render(_params(iss=0, events=0, ecliptic=0, equator=1), eq, ISS, None)
+    assert a.tobytes() != b.tobytes()

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from PIL import Image, ImageDraw
 
 from sky import layout
-from sky.astro import SkyModel
+from sky.astro import SunInfo, SkyModel
 from sky.events import Event
 from sky.fonts import BdfFont, draw_text, fit, load_font, text_width
 from sky.geo import compass, fmt_coords, fmt_date, fmt_time, tr
@@ -26,6 +26,7 @@ LABEL_MIN_MAP = 300       # popisky souhvězdí jen na mapách aspoň takto velk
 HORIZON_BAR = layout.HORIZON_BAR
 DASH = {"solid": None, "dashed": (4, 4), "dotted": (1, 2)}   # (kreslit, vynechat) v px
 ECLIPTIC_DASH = (1, 3)
+EQUATOR_DASH = (5, 3)      # odlišit od ekliptiky (tečky) i čárkovaných souhvězdí (4, 4)
 TRACK_DASH = (3, 2)
 HOLLOW_PLANETS = ("uranus", "neptune")        # jen pro dalekohled: prázdný kroužek
 Box = tuple[int, int, int, int]
@@ -301,6 +302,8 @@ def _draw_track(ctx: Ctx, placed: list[Box], info: IssInfo, params: Params, proj
 
 
 def _draw_ecliptic(ctx: Ctx, model: SkyModel, params: Params, clip, wraps, ox: int, oy: int) -> None:
+    if params.equator and model.equator is not None and len(model.equator):
+        _draw_polyline(ctx, model.equator, clip, wraps, ox, oy, EQUATOR_DASH, ctx.pal["ecliptic"], closed=True)
     if params.ecliptic and model.ecliptic is not None and len(model.ecliptic):
         _draw_polyline(ctx, model.ecliptic, clip, wraps, ox, oy, ECLIPTIC_DASH, ctx.pal["ecliptic"], closed=True)
 
@@ -475,16 +478,25 @@ def _draw_header(ctx: Ctx, z: Zones, model: SkyModel) -> None:
               ctx.small, ctx.pal["fg"])
 
 
+def sun_lines(lang: str, tz, sun: SunInfo) -> list[str]:
+    """Východ, západ a podle fáze noci: občanský soumrak / svítání (−6°) a astronomická tma (−18°)."""
+    f = lambda d: fmt_time(d, tz)
+    dark_span = f"{tr(lang, 'dark')} {f(sun.dark_start)}–{f(sun.dark_end)}"
+    if sun.alt < -18.0:
+        rest = [f"{tr(lang, 'dark_until')} {f(sun.dark_end)}", f"{tr(lang, 'dawn_from')} {f(sun.civil_dawn)}"]
+    elif sun.alt < -6.0:
+        rest = [dark_span, f"{tr(lang, 'dawn_from')} {f(sun.civil_dawn)}"]
+    else:
+        rest = [f"{tr(lang, 'dusk_until')} {f(sun.civil_dusk)}", dark_span]
+    return [f"{tr(lang, 'rise'):<7}{f(sun.rise)}", f"{tr(lang, 'set'):<7}{f(sun.set)}"] + rest
+
+
 def _sec_sun(c: Cursor, model: SkyModel, weather: CloudInfo | None = None) -> None:
     L, tz = c.ctx.lang, model.tz
     if not c.title("sun", tr(L, "sun")):
         return
-    c.line(f"{tr(L, 'rise'):<7}{fmt_time(model.sun.rise, tz)}")
-    c.line(f"{tr(L, 'set'):<7}{fmt_time(model.sun.set, tz)}")
-    if model.sun.alt < -0.8333:
-        c.line(f"{tr(L, 'dawn_at')} {fmt_time(model.sun.next_rise, tz)}")
-    else:
-        c.line(f"{tr(L, 'night_from')} {fmt_time(model.sun.next_set, tz)}")
+    for text in sun_lines(L, tz, model.sun):
+        c.line(text)
     if weather is not None:
         c.line(weather_line(L, tz, weather, c.w // c.ctx.small.width))
     c.gap()

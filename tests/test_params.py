@@ -107,3 +107,8 @@ def test_comets_limit():
     assert parse({"comets": "off"}, CFG_LOC, "png").comets is None
     with pytest.raises(ParamError):
         parse({"comets": "20"}, CFG_LOC, "png")
+
+
+def test_equator_flag():
+    assert parse({}, CFG_LOC, "png").equator is False
+    assert parse({"equator": "1"}, CFG_LOC, "png").equator is True

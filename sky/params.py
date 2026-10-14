@@ -47,6 +47,7 @@ class Params:
     sunmoon: bool = False           # popisky Slunce a Měsíce na mapě
     constnames: bool = True         # názvy souhvězdí na mapě
     comets: float | None = 6.0      # komety do této magnitudy; None = vypnuto (comets=0|off)
+    equator: bool = False           # nebeský rovník (čárkovaně)
     starnames: float | None = None  # jména hvězd do této magnitudy; None = vypnuto
 
 
@@ -142,5 +143,6 @@ def parse(q: Mapping[str, str], cfg: Config, fmt: str = "png") -> Params:
         sunmoon=_flag(q, "sunmoon", False),
         constnames=_flag(q, "constnames", True),
         comets=_comets(q),
+        equator=_flag(q, "equator", False),
         starnames=_num(q, "starnames", None, -2.0, 4.5, float) if q.get("starnames") else None,
     )
