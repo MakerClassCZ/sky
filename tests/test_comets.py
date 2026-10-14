@@ -57,13 +57,18 @@ def test_compute_positions_and_limit():
 @ephem
 def test_hale_bopp_1997_matches_history():
     # 1. 4. 1997 (perihel): Hale-Bopp v Andromedě/Perseu, RA ~2 h, Dec ~+43°, jasnost kolem −1 mag
-    from skyfield.constants import GM_SUN_Pitjeva_2005_km3_s2 as GM_SUN
-    from skyfield.data import mpc
     eph = astro.get_ephemeris(CACHE)
     hb = next(c for c in comets.parse_elements(TEXT) if "Hale-Bopp" in c.name)
     tt = eph.ts.from_datetime(datetime(1997, 4, 1, tzinfo=timezone.utc))
-    orbit = eph.eph["sun"] + mpc.comet_orbit(hb, eph.ts, GM_SUN)
+    orbit = eph.eph["sun"] + comets.comet_orbit(hb, eph.ts)
     ra, dec, dist = eph.eph["earth"].at(tt).observe(orbit).radec()
     assert 1.8 < ra.hours < 2.4 and 41 < dec.degrees < 45
     found = comets.compute([hb], eph, 49.747, 13.378, datetime(1997, 4, 1, tzinfo=timezone.utc), limit=20.0)
     assert found[0].name == "Hale-Bopp" and -2.5 < found[0].mag < -1.0
+
+
+def test_import_does_not_pull_pandas():
+    # skyfield.data.mpc importuje pandas; v obrazu není a nechceme ho (desítky MB)
+    import subprocess, sys
+    code = "import sys, sky.comets; sys.exit(1 if 'pandas' in sys.modules else 0)"
+    assert subprocess.run([sys.executable, "-c", code], cwd=".").returncode == 0

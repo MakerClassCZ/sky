@@ -20,7 +20,8 @@ from datetime import datetime, timezone
 import numpy as np
 from skyfield.api import wgs84
 from skyfield.constants import GM_SUN_Pitjeva_2005_km3_s2 as GM_SUN
-from skyfield.data import mpc
+from skyfield.data.spice import inertial_frames
+from skyfield.keplerlib import _KeplerOrbit
 
 from sky.config import Config
 from sky.netcache import fetch_text
@@ -107,6 +108,20 @@ def load_elements(cfg: Config) -> list[Elements]:
     return _elements_cache[1]
 
 
+def comet_orbit(el: Elements, ts):
+    """Totéž co skyfield.data.mpc.comet_orbit, ale bez importu pandas (ten modul ho tahá při importu)."""
+    e = el.eccentricity
+    if e == 1.0:
+        p = el.perihelion_distance_au * 2.0
+    else:
+        p = el.perihelion_distance_au / (1.0 - e) * (1.0 - e * e)
+    t_peri = ts.tt(el.perihelion_year, el.perihelion_month, el.perihelion_day)
+    orbit = _KeplerOrbit._from_periapsis(p, e, el.inclination_degrees, el.longitude_of_ascending_node_degrees,
+                                         el.argument_of_perihelion_degrees, t_peri, GM_SUN, 10, el.name)
+    orbit._rotation = inertial_frames["ECLIPJ2000"].T
+    return orbit
+
+
 def magnitude(h: float, g: float, delta_au: float, r_au: float) -> float:
     return h + 5.0 * math.log10(max(delta_au, 1e-6)) + 2.5 * g * math.log10(max(r_au, 1e-6))
 
@@ -128,7 +143,7 @@ def _candidates(elements: list[Elements], year: int, limit: float) -> list[Eleme
 
 def _geometry(el: Elements, ts, tt, sun, sun_pos, earth_pos):
     """(dráha, r [AU], Δ [AU]) geometricky, bez světelného času (na jasnost nemá vliv)."""
-    orbit = sun + mpc.comet_orbit(el, ts, GM_SUN)
+    orbit = sun + comet_orbit(el, ts)
     pos = orbit.at(tt).position.au
     return orbit, float(np.linalg.norm(pos - sun_pos)), float(np.linalg.norm(pos - earth_pos))
 
