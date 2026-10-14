@@ -52,3 +52,18 @@ def test_compute_positions_and_limit():
     assert 8.0 < hartley.mag < 11.5
     assert comets.compute(els, eph, 49.747, 13.378, t, limit=-5.0) == []
     assert all(c.mag <= 10.0 for c in comets.compute(els, eph, 49.747, 13.378, t, limit=10.0))
+
+
+@ephem
+def test_hale_bopp_1997_matches_history():
+    # 1. 4. 1997 (perihel): Hale-Bopp v Andromedě/Perseu, RA ~2 h, Dec ~+43°, jasnost kolem −1 mag
+    from skyfield.constants import GM_SUN_Pitjeva_2005_km3_s2 as GM_SUN
+    from skyfield.data import mpc
+    eph = astro.get_ephemeris(CACHE)
+    hb = next(c for c in comets.parse_elements(TEXT) if "Hale-Bopp" in c.name)
+    tt = eph.ts.from_datetime(datetime(1997, 4, 1, tzinfo=timezone.utc))
+    orbit = eph.eph["sun"] + mpc.comet_orbit(hb, eph.ts, GM_SUN)
+    ra, dec, dist = eph.eph["earth"].at(tt).observe(orbit).radec()
+    assert 1.8 < ra.hours < 2.4 and 41 < dec.degrees < 45
+    found = comets.compute([hb], eph, 49.747, 13.378, datetime(1997, 4, 1, tzinfo=timezone.utc), limit=20.0)
+    assert found[0].name == "Hale-Bopp" and -2.5 < found[0].mag < -1.0
