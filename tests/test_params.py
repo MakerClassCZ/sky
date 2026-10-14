@@ -82,3 +82,14 @@ def test_clock_time_and_mode_and_flags():
     for bad in ({"t": "25:00"}, {"t": "7:5"}, {"mode": "dark"}):
         with pytest.raises(ParamError):
             parse(bad, CFG_LOC, "png")
+
+
+def test_sunmoon_and_starnames():
+    p = parse({}, CFG_LOC, "png")
+    assert p.sunmoon is False and p.starnames is None
+    p = parse({"sunmoon": "1", "starnames": "2.5"}, CFG_LOC, "png")
+    assert p.sunmoon is True and p.starnames == 2.5
+    assert parse({"starnames": "0"}, CFG_LOC, "png").starnames == 0.0     # 0 mag je platná mez (Vega)
+    assert parse({"starnames": ""}, CFG_LOC, "png").starnames is None
+    with pytest.raises(ParamError):
+        parse({"starnames": "9"}, CFG_LOC, "png")

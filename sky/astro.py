@@ -1,7 +1,7 @@
 """Výpočet oblohy přes Skyfield (spec §4, §5.1, §6.1)."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
@@ -96,6 +96,7 @@ class SkyModel:
     sun: SunInfo
     moon: MoonInfo
     ecliptic: np.ndarray = None                         # (n, 2): alt, az podél ekliptiky
+    star_names: list[tuple[str, float, float, float]] = field(default_factory=list)   # text, alt, az, mag
 
 
 def first_or_none(times, oks) -> datetime | None:
@@ -148,6 +149,13 @@ def compute(params: Params, eph: Ephemeris, catalog: Catalog, lang: str, t: date
                              np.array([catalog.names[k].dec for k in ids]))
     labels = [(catalog.names[k].label(lang), float(calt[j]), float(caz[j])) for j, k in enumerate(ids)]
 
+    # Jména jasných hvězd (jen na vyžádání, do zadané magnitudy)
+    star_names: list[tuple[str, float, float, float]] = []
+    if params.starnames is not None:
+        chosen = [s for s in catalog.named_stars if s.mag <= params.starnames]
+        salt, saz = _stars_altaz(at, np.array([s.ra_hours for s in chosen]), np.array([s.dec for s in chosen]))
+        star_names = [(s.label(lang), float(salt[j]), float(saz[j]), s.mag) for j, s in enumerate(chosen)]
+
     planets = [Body(key, cs if lang == "cs" else en, *_altaz(at, e[key])) for key, cs, en in PLANETS]
 
     sun_alt, sun_az = _altaz(at, e["sun"])
@@ -177,4 +185,5 @@ def compute(params: Params, eph: Ephemeris, catalog: Catalog, lang: str, t: date
         rise=first_or_none(*almanac.find_risings(observer, e["moon"], day0, day1)),
         set=first_or_none(*almanac.find_settings(observer, e["moon"], day0, day1)),
     )
-    return SkyModel(t, tz, params.lat, params.lon, mode, stars, lines, labels, planets, sun, moon, ecliptic)
+    return SkyModel(t, tz, params.lat, params.lon, mode, stars, lines, labels, planets, sun, moon, ecliptic,
+                    star_names)

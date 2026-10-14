@@ -16,8 +16,12 @@ def lon_to_ra_hours(lon: float) -> float:
 
 
 def _clean(name: str) -> str:
-    """Data používají U+2005 (čtvrtinová mezera); fonty ji nemají."""
-    return " ".join(name.replace(" ", " ").split())
+    """Data používají U+2005 / U+2009 (úzké mezery); fonty je nemají."""
+    return " ".join(name.replace(" ", " ").replace(" ", " ").split())
+
+
+# Vlastní jména hvězd jsou mezinárodní (IAU); česky se liší jen pár nejznámějších.
+STAR_NAMES_CS = {"Arcturus": "Arktur", "Polaris": "Polárka", "Betelgeuse": "Betelgeuze"}
 
 
 @dataclass(frozen=True)
@@ -34,18 +38,31 @@ class ConstName:
 
 
 @dataclass(frozen=True)
+class StarName:
+    name: str
+    mag: float
+    ra_hours: float
+    dec: float
+
+    def label(self, lang: str) -> str:
+        return STAR_NAMES_CS.get(self.name, self.name) if lang == "cs" else self.name
+
+
+@dataclass(frozen=True)
 class Catalog:
     ra_hours: np.ndarray
     dec_deg: np.ndarray
     mag: np.ndarray
     lines: list[tuple[str, list[np.ndarray]]]
     names: dict[str, ConstName]
+    named_stars: list[StarName]      # seřazeno od nejjasnější
 
 
 @lru_cache(maxsize=None)
 def load_catalog(mag_limit: float = 4.5) -> Catalog:
     stars = json.loads((DATA_DIR / "stars.6.json").read_text(encoding="utf-8"))
-    ra, dec, mag = [], [], []
+    star_names = json.loads((DATA_DIR / "starnames.json").read_text(encoding="utf-8"))
+    ra, dec, mag, named = [], [], [], []
     for f in stars["features"]:
         m = float(f["properties"]["mag"])
         if m <= mag_limit:
@@ -53,6 +70,10 @@ def load_catalog(mag_limit: float = 4.5) -> Catalog:
             ra.append(lon_to_ra_hours(lon))
             dec.append(lat)
             mag.append(m)
+            nm = star_names.get(str(f["id"]))
+            if nm:
+                named.append(StarName(_clean(nm), m, lon_to_ra_hours(lon), lat))
+    named.sort(key=lambda s: s.mag)
 
     lines_json = json.loads((DATA_DIR / "constellations.lines.json").read_text(encoding="utf-8"))
     lines = []
@@ -68,4 +89,4 @@ def load_catalog(mag_limit: float = 4.5) -> Catalog:
         lon, lat = f["geometry"]["coordinates"]
         names[f["id"]] = ConstName(f["id"], _clean(p.get("cz") or p["name"]), _clean(p.get("en") or p["name"]),
                                    int(p.get("rank", "3")), lon_to_ra_hours(lon), lat)
-    return Catalog(np.array(ra), np.array(dec), np.array(mag), lines, names)
+    return Catalog(np.array(ra), np.array(dec), np.array(mag), lines, names, named)

@@ -44,6 +44,8 @@ class Params:
     mode: str = "auto"
     weather: bool = True
     ecliptic: bool = True
+    sunmoon: bool = False           # popisky Slunce a Měsíce na mapě
+    starnames: float | None = None  # jména hvězd do této magnitudy; None = vypnuto
 
 
 def _num(q, key, default, lo, hi, cast):
@@ -128,4 +130,6 @@ def parse(q: Mapping[str, str], cfg: Config, fmt: str = "png") -> Params:
         mode=_choice(q, "mode", "auto", MODES),
         weather=_flag(q, "weather", True),
         ecliptic=_flag(q, "ecliptic", True),
+        sunmoon=_flag(q, "sunmoon", False),
+        starnames=_num(q, "starnames", None, -2.0, 4.5, float) if q.get("starnames") else None,
     )

@@ -50,6 +50,8 @@ GET /health
 | `mode` | `auto` \| `night` \| `day` | režim podle Slunce, nebo vynucený tmavý / světlý | `auto` |
 | `weather` | 0 \| 1 | oblačnost na noc v sekci Slunce (Open-Meteo) | `1` |
 | `ecliptic` | 0 \| 1 | tečkovaná ekliptika (u `spectra` modrá) | `1` |
+| `sunmoon` | 0 \| 1 | popisky „Slunce“ a „Měsíc“ u jejich symbolů na mapě | `0` |
+| `starnames` | −2..4,5 | jména jasných hvězd do této magnitudy (např. `2.5` ≈ 90 hvězd na celé obloze, Vega, Arktur, Polárka…); bez parametru vypnuto | – |
 | `iss`, `events` | 0 \| 1 | vypnutí sekce ISS / úkazů | `1` |
 | `rockets` | 0 \| 1 | starty raket (Launch Library 2) v seznamu úkazů, s časem startu | `0` |
 | `lines` | `solid` \| `dashed` \| `dotted` | spojnice souhvězdí plné, čárkované, tečkované (menší kontrast) | `solid` |
@@ -139,6 +141,7 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
 ## Co je na obrázku
 
 - **Mapa**: hvězdy do 4,5 mag (velikost podle jasnosti), čáry a názvy souhvězdí,
+  volitelně jména jasných hvězd (`starnames`) a popisky Slunce a Měsíce (`sunmoon`),
   Merkur až Neptun (Uran a Neptun prázdným kroužkem, jsou jen pro dalekohled),
   Měsíc s fází natočenou ke Slunci, Slunce je-li nad obzorem, tečkovaná ekliptika,
   ISS je-li nad obzorem a hodinu před viditelným přeletem jeho čárkovaná dráha
@@ -153,8 +156,9 @@ potřeba. Paperboard firmware (`[remote_image]`) umí stejné PNG z LAN.
 
 ## Zdroje dat a licence
 
-- Hvězdy, čáry a názvy souhvězdí: [d3-celestial](https://github.com/ofrohn/d3-celestial)
-  (BSD-3, `sky/data/LICENSE-d3-celestial`); hvězdy z katalogu XHIP, čáry podle IAU.
+- Hvězdy, čáry a názvy souhvězdí, jména hvězd: [d3-celestial](https://github.com/ofrohn/d3-celestial)
+  (BSD-3, `sky/data/LICENSE-d3-celestial`); hvězdy z katalogu XHIP, čáry podle IAU,
+  jména hvězd (IAU) zkrácená na hvězdy do 4,5 mag v `sky/data/starnames.json`.
 - Efemerida JPL DE421 a výpočty: [Skyfield](https://rhodesmill.org/skyfield/) (MIT).
 - Dráha ISS: TLE z [Celestrak](https://celestrak.org/).
 - Oblačnost: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0, bez klíče, nekomerční použití

@@ -183,13 +183,16 @@ def _place_label(ctx: Ctx, placed: list[Box], x: float, y: float, text: str, bou
     _label(ctx, placed, text, ctx.pal["label"], [(x - w / 2, y - h / 2)], bounds)
 
 
-def _body_label(ctx: Ctx, placed: list[Box], x: float, y: float, text: str, idx: int, bounds) -> None:
-    """Popisek tělesa: vpravo, vlevo, nad, pod – první volná pozice. Glyf sám se registruje."""
+def _body_label(ctx: Ctx, placed: list[Box], x: float, y: float, text: str, idx: int, bounds,
+                gap: int = 6) -> None:
+    """Popisek tělesa: vpravo, vlevo, nad, pod – první volná pozice. Glyf sám se registruje.
+
+    `gap` = odstup od středu tělesa (poloměr glyfu + 1); svisle o pixel víc."""
     placed.append((int(x) - 5, int(y) - 5, int(x) + 6, int(y) + 6))
     w, h = text_width(ctx.small, text), ctx.small.height
-    gap = 11 if text == "Saturn" else 6     # Saturn má prstenec, popisek dál od středu
     _label(ctx, placed, text, idx,
-           [(x + gap, y - h / 2), (x - gap - w, y - h / 2), (x - w / 2, y - 7 - h), (x - w / 2, y + 7)], bounds)
+           [(x + gap, y - h / 2), (x - gap - w, y - h / 2), (x - w / 2, y - gap - 1 - h), (x - w / 2, y + gap + 1)],
+           bounds)
 
 
 def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
@@ -201,21 +204,34 @@ def _draw_bodies(ctx: Ctx, placed: list[Box], bounds, project, visible,
             _planet(ctx, x, y, b.key)
             if b.key.startswith("saturn"):
                 placed.append((int(x) - 9, int(y) - 4, int(x) + 10, int(y) + 5))
-            _body_label(ctx, placed, x, y, b.name, ctx.pal["label"], bounds)
+            _body_label(ctx, placed, x, y, b.name, ctx.pal["label"], bounds,
+                        gap=11 if b.key.startswith("saturn") else 6)     # Saturn má prstenec
     if visible(model.moon.alt, model.moon.az):
         x, y = project(model.moon.alt, model.moon.az)
         # směr osvětlené strany: krátký krok po velké kružnici k Slunci, promítnutý do obrazu
         toward = step_toward(model.moon.alt, model.moon.az, model.sun.alt, model.sun.az, 2.0)
         _moon(ctx, x, y, model.moon.phase_deg, moon_lit_direction((x, y), project(*toward)))
         placed.append((int(x) - 9, int(y) - 9, int(x) + 10, int(y) + 10))
+        if params.sunmoon:
+            _body_label(ctx, placed, x, y, tr(ctx.lang, "moon"), ctx.pal["label"], bounds, gap=11)
     if visible(model.sun.alt, model.sun.az):
         x, y = project(model.sun.alt, model.sun.az)
         _sun(ctx, x, y)
         placed.append((int(x) - 14, int(y) - 14, int(x) + 15, int(y) + 15))
+        if params.sunmoon:
+            _body_label(ctx, placed, x, y, tr(ctx.lang, "sun"), ctx.pal["label"], bounds, gap=16)
     if params.iss and iss_info.available and iss_info.alt is not None and visible(iss_info.alt, iss_info.az):
         x, y = project(iss_info.alt, iss_info.az)
         _iss_marker(ctx, x, y)
         _body_label(ctx, placed, x, y, "ISS", ctx.pal["iss"], bounds)
+
+
+def _draw_star_names(ctx: Ctx, placed: list[Box], bounds, project, visible, model: SkyModel) -> None:
+    """Jména jasných hvězd (model je má jen při `starnames`); od nejjasnější, kolize vynechá."""
+    for text, alt, az, mag in model.star_names:
+        if visible(alt, az):
+            x, y = project(alt, az)
+            _body_label(ctx, placed, x, y, text, ctx.pal["label"], bounds, gap=_star_size(mag) + 2)
 
 
 def _styled_line(d: ImageDraw.ImageDraw, p0, p1, fill: int, pattern) -> None:
@@ -317,6 +333,7 @@ def _draw_sky(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: IssI
     _draw_bodies(ctx, placed, inside_circle, project, visible, model, iss_info, params)
     _draw_track(ctx, placed, iss_info, params, project, clip, lambda z0, z1: False, ox, oy, model, inside_circle)
     if m.w >= LABEL_MIN_MAP:
+        _draw_star_names(ctx, placed, inside_circle, project, visible, model)
         for text, alt, az in model.labels:
             if alt >= LABEL_MIN_ALT:
                 x, y = project(alt, az)
@@ -362,6 +379,7 @@ def _draw_horizon(ctx: Ctx, m: Rect, params: Params, model: SkyModel, iss_info: 
     _draw_bodies(ctx, placed, inside_rect, project, proj.visible, model, iss_info, params)
     _draw_track(ctx, placed, iss_info, params, project, clip, proj.segment_wraps, ox, oy, model, inside_rect)
     if mh >= LABEL_MIN_MAP // 2:
+        _draw_star_names(ctx, placed, inside_rect, project, proj.visible, model)
         for text, alt, az in model.labels:
             if alt >= LABEL_MIN_ALT and proj.visible(alt, az):
                 x, y = project(alt, az)

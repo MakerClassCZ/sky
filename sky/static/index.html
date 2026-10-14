@@ -81,6 +81,7 @@
   .seg input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 1px; }
   .check { display: flex; align-items: center; gap: 8px; color: var(--ink); }
   .check input { width: 18px; height: 18px; min-height: 0; accent-color: var(--focus); }
+  .check select.inline { width: auto; min-height: 0; padding: 2px 6px; margin: 0 2px; }
   a.src { color: var(--ink-dim); font-size: 13px; margin-left: 4px; text-decoration: underline dotted; }
   a.src:hover, a.src:focus-visible { color: var(--ink); }
 
@@ -235,6 +236,9 @@
         <label class="f">Režim <select name="mode"><option value="auto">podle Slunce</option><option value="night">vždy noční</option><option value="day">vždy denní</option></select></label>
         <label class="f">Jazyk <select name="lang"><option value="cs">česky</option><option value="en">English</option></select></label>
         <label class="check" style="align-self:end"><input type="checkbox" name="ecliptic" checked> Ekliptika (tečkovaně)</label>
+        <label class="check" style="align-self:end"><input type="checkbox" name="sunmoon"> Popisky Slunce a Měsíce</label>
+        <label class="check" style="align-self:end"><input type="checkbox" name="starnames"> Jména hvězd do
+          <select name="starmag" class="inline"><option value="1.5">1,5</option><option value="2.0">2,0</option><option value="2.5" selected>2,5</option><option value="3.0">3,0</option></select> mag</label>
       </div>
       <p class="hint" style="margin-bottom:12px">Nastavení si tento prohlížeč pamatuje.</p>
     </details>
@@ -338,6 +342,8 @@
     if (q('rockets').checked) p.set('rockets', '1');
     if (!q('weather').checked) p.set('weather', '0');
     if (!q('ecliptic').checked) p.set('ecliptic', '0');
+    if (q('sunmoon').checked) p.set('sunmoon', '1');
+    if (q('starnames').checked) p.set('starnames', val('starmag'));
     const tm = val('tmode');
     if (tm === 'clock' && val('clock')) p.set('t', val('clock'));
     if (withTime && tm === 'fixed' && tField.value) p.set('t', localIso(tField.value));

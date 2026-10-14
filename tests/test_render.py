@@ -271,3 +271,33 @@ def test_moon_direction_follows_great_circle():
     assert z > 180.0 and a > 40.0        # velká kružnice mezi dvěma body na alt 40 se vyklene výš
     # nulová vzdálenost nesmí spadnout
     assert step_toward(10.0, 10.0, 10.0, 10.0, 1.0) == pytest.approx((10.0, 10.0))
+
+
+def test_body_label_clears_big_glyph():
+    from sky.render import Ctx, _body_label
+    from sky.fonts import load_font
+    from sky.palette import make_palette
+    from PIL import Image, ImageDraw
+    img = Image.new("P", (200, 100))
+    ctx = Ctx(img, ImageDraw.Draw(img), make_palette("bw", "night"), "cs", load_font("8x16"), load_font("12x24"),
+              load_font("16x32"))
+    placed = [(100 - 14, 50 - 14, 100 + 15, 50 + 15)]        # registrovaný glyf Slunce
+    _body_label(ctx, placed, 100, 50, "Slunce", 0, lambda b: True, gap=16)
+    assert len(placed) == 3                                  # glyf + popisek
+    assert not any(placed[2][0] < b[2] and placed[2][2] > b[0] and placed[2][1] < b[3] and placed[2][3] > b[1]
+                   for b in placed[:2])
+
+
+def test_sunmoon_labels_change_image():
+    a = render(_params(view="horizon", az=120, mode="day", iss=0, events=0), fake_model("day"), ISS, None)
+    b = render(_params(view="horizon", az=120, mode="day", iss=0, events=0, sunmoon=1), fake_model("day"), ISS, None)
+    assert a.tobytes() != b.tobytes()
+
+
+def test_star_names_drawn_when_model_has_them():
+    m = fake_model()
+    named = SkyModel(m.t, m.tz, m.lat, m.lon, m.mode, m.stars, m.lines, m.labels, m.planets, m.sun, m.moon,
+                     m.ecliptic, [("Vega", 50.0, 0.0, 2.0), ("Sirius", 30.0, 180.0, 0.5)])
+    a = render(_params(iss=0, events=0), m, ISS, None)
+    b = render(_params(iss=0, events=0), named, ISS, None)
+    assert a.tobytes() != b.tobytes()

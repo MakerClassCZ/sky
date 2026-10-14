@@ -78,3 +78,16 @@ def test_outer_planets_mode_force_and_ecliptic():
     assert m.mode == "night" and m.sun.alt > 0                 # vynuceno, Slunce je přitom nad obzorem
     assert [b.name for b in m.planets] == ["Merkur", "Venuše", "Mars", "Jupiter", "Saturn", "Uran", "Neptun"]
     assert m.ecliptic.shape[1] == 2 and len(m.ecliptic) >= 72
+
+
+@ephem
+def test_star_names_only_when_requested():
+    cat = load_catalog()
+    eph = astro.get_ephemeris(CACHE)
+    t = datetime(2026, 1, 15, 20, 0, tzinfo=timezone.utc)
+    m = astro.compute(parse(PLZEN, config.load({}), "png"), eph, cat, "cs", t)
+    assert m.star_names == []
+    p = parse({**PLZEN, "starnames": "2.5"}, config.load({}), "png")
+    m = astro.compute(p, eph, cat, "cs", t)
+    assert m.star_names and all(mag <= 2.5 for _, _, _, mag in m.star_names)
+    assert any(text == "Capella" for text, *_ in m.star_names)
